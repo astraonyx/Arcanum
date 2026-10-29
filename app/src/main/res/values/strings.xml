@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">Arcanum</string>
+    <string name="security_gate_title">Arcanum Keamanan 3-Lapis</string>
+    <string name="layer_1_title">Lapis 1: PIN Akses Utama</string>
+    <string name="layer_2_title">Lapis 2: PIN Kunci Enkripsi</string>
+    <string name="layer_3_title">Lapis 3: PIN Otorisasi Brankas</string>
+    <string name="biometric_step_title">Verifikasi Biometrik Tambahan</string>
+    <string name="biometric_prompt_title">Autentikasi Biometrik Trantor Vault</string>
+    <string name="biometric_prompt_subtitle">Pindai sidik jari atau wajah untuk membuka kunci brankas terenkripsi</string>
+    <string name="nav_dashboard">Brankas</string>
+    <string name="nav_files">File</string>
+    <string name="nav_player">Media Player</string>
+    <string name="nav_engine">Script Engine</string>
+    <string name="action_encrypt_all">Enkripsi Semua</string>
+    <string name="action_decrypt_all">Dekripsi Semua</string>
+    <string name="action_import_file">Impor File &amp; Media</string>
+    <string name="action_lock_vault">Kunci Brankas</string>
+</resources>

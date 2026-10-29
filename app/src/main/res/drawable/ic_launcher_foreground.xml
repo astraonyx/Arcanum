@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Planetary Orbit Ring (Cosmic Blue-Violet Glow) -->
+    <path
+        android:strokeWidth="2.8"
+        android:pathData="M18,72 C18,60 90,44 92,58 C94,72 22,88 18,72 Z">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="18"
+                android:startY="60"
+                android:endX="92"
+                android:endY="72"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#3B82F6" />
+                <item android:offset="0.6" android:color="#8B5CF6" />
+                <item android:offset="1.0" android:color="#EC4899" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Smiling Yellow-Gold Vault Folder (Front Tab + Back Tab) -->
+    <!-- Back Blue Tab -->
+    <path
+        android:fillColor="#2563EB"
+        android:pathData="M50,44 L70,44 C72.2,44 74,45.8 74,48 L74,54 L46,54 L46,48 C46,45.8 47.8,44 50,44 Z" />
+    
+    <!-- Front Smiling Golden Folder Body -->
+    <path
+        android:pathData="M40,49 L68,49 C72.4,49 76,52.6 76,57 L76,73 C76,77.4 72.4,81 68,81 L40,81 C35.6,81 32,77.4 32,73 L32,57 C32,52.6 35.6,49 40,49 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="32"
+                android:startY="49"
+                android:endX="76"
+                android:endY="81"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FDE047" />
+                <item android:offset="1.0" android:color="#F59E0B" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Folder Cute Facial Features (Eyes & Smile) -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M44,61m-2.2,0a2.2,3.2 0,1 1,4.4 0a2.2,3.2 0,1 1,-4.4 0" />
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M64,61m-2.2,0a2.2,3.2 0,1 1,4.4 0a2.2,3.2 0,1 1,-4.4 0" />
+    <path
+        android:strokeColor="#0F172A"
+        android:strokeWidth="1.8"
+        android:strokeCap="round"
+        android:pathData="M50,70 Q54,73 58,70" />
+
+    <!-- Sleek Neon Celestial Dragon Body & Head Swirling Around Folder -->
+    <!-- Dragon Horn & Mane Crest -->
+    <path
+        android:pathData="M58,20 C64,21 72,24 76,32 C78,36 84,40 88,48 C85,46 80,44 76,46 C80,51 82,58 84,66 C80,60 76,57 71,59 C74,52 75,44 71,38 C68,34 62,31 56,32 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="56"
+                android:startY="20"
+                android:endX="88"
+                android:endY="66"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FFFFFF" />
+                <item android:offset="0.5" android:color="#C7D2FE" />
+                <item android:offset="1.0" android:color="#818CF8" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Dragon Head & Snout -->
+    <path
+        android:pathData="M60,22 C53,23 48,27 45,32 C41,33 37,36 34,39 C36,41 40,40 43,41 C42,43 40,46 41,47 C44,46 46,43 49,42 C53,44 57,43 61,39 C64,36 67,31 66,27 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="34"
+                android:startY="22"
+                android:endX="66"
+                android:endY="47"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FFFFFF" />
+                <item android:offset="1.0" android:color="#E0E7FF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Dragon Sleek Sharp Eye -->
+    <path
+        android:fillColor="#1E1B4B"
+        android:pathData="M52,32 L47,35 L52,36 Z" />
+
+    <!-- Dragon Swirling Tail Coiling Under Folder -->
+    <path
+        android:pathData="M84,66 C86,76 80,85 70,89 C58,94 44,92 34,84 C38,84 46,87 56,86 C66,85 73,80 75,72 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="34"
+                android:startY="66"
+                android:endX="86"
+                android:endY="94"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#60A5FA" />
+                <item android:offset="0.5" android:color="#818CF8" />
+                <item android:offset="1.0" android:color="#A855F7" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Foreground Orbit Crescent -->
+    <path
+        android:strokeWidth="2.8"
+        android:strokeCap="round"
+        android:pathData="M18,72 C22,86 64,88 88,74">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="18"
+                android:startY="72"
+                android:endX="88"
+                android:endY="88"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#38BDF8" />
+                <item android:offset="1.0" android:color="#818CF8" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>
