@@ -5,10 +5,10 @@ Deliver the unified Mori Downloader engine supporting 16+ platforms (TikTok no-w
 
 **Blocked by:** 01-neon-dragon-icon-and-cosmic-theme-tokens, 02-omnipresent-cosmic-dragon-mascot
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Complete platform URL parser and extraction routines for supported domains
-- [ ] Implement clipboard auto-detection on app resume with quick paste banner
-- [ ] Connect download state to the Cosmic Dragon "Download Hunter" flight animation
-- [ ] Provide toggle to save directly into encrypted NYX2 Vault or decrypt to external storage
-- [ ] Ensure background download notification and error recovery
+- [x] Complete platform URL parser and extraction routines for supported domains
+- [x] Implement clipboard auto-detection on app resume with quick paste banner
+- [x] Connect download state to the Cosmic Dragon "Download Hunter" flight animation
+- [x] Provide toggle to save directly into encrypted NYX2 Vault or decrypt to external storage
+- [x] Ensure background download notification and error recovery

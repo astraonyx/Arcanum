@@ -5,9 +5,9 @@ Process the user-provided Neon Dragon Folder graphic into complete Android launc
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Extract and crop the uploaded Neon Dragon Folder image into square and circular assets
-- [ ] Generate Android launcher icons for all density buckets in `res/mipmap-*/`
-- [ ] Define Cosmic theme colors, gradients, and typography tokens in `Color.kt` and `Theme.kt`
-- [ ] Verify launcher XML drawables reference the updated neon dragon assets
+- [x] Extract and crop the uploaded Neon Dragon Folder image into square and circular assets
+- [x] Generate Android launcher icons for all density buckets in `res/mipmap-*/`
+- [x] Define Cosmic theme colors, gradients, and typography tokens in `Color.kt` and `Theme.kt`
+- [x] Verify launcher XML drawables reference the updated neon dragon assets

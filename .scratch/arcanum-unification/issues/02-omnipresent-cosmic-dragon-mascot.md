@@ -5,9 +5,9 @@ Replace the legacy owl mascot with the 4-legged winged Cosmic Dragon (`CosmicDra
 
 **Blocked by:** 01-neon-dragon-icon-and-cosmic-theme-tokens
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Implement quadruped body, dual wings, head crest, swishing tail, and expressive eyes on Compose Canvas
-- [ ] Implement shifting galaxy aurora shader gradient and twinkling star particles
-- [ ] Connect interactive touch listener with spring bounce and barrel-roll animation
-- [ ] Wire emotional states to Vault PIN entry, lock/unlock events, download progress, and MT inspection
+- [x] Implement quadruped body, dual wings, head crest, swishing tail, and expressive eyes on Compose Canvas
+- [x] Implement shifting galaxy aurora shader gradient and twinkling star particles
+- [x] Connect interactive touch listener with spring bounce and barrel-roll animation
+- [x] Wire emotional states to Vault PIN entry, lock/unlock events, download progress, and MT inspection

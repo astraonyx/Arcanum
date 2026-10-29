@@ -5,10 +5,10 @@ Assemble all subsystems into `MainActivity.kt` with a 4-dock Orbital Navigation 
 
 **Blocked by:** 01-neon-dragon-icon-and-cosmic-theme-tokens, 02-omnipresent-cosmic-dragon-mascot, 03-repaired-youtube-style-media-deck, 04-mori-universal-downloader-pipeline, 05-mt-dual-pane-explorer-and-vault-bridge
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Connect the 4-dock orbital navigation bar in `MainActivity.kt`
-- [ ] Remove obsolete habit and todo UI components and data structures
-- [ ] Embed the ambient Cosmic Dragon widget in the global header across all tabs
-- [ ] Apply cosmic styling (deep space background, hairline borders, stellar glows)
-- [ ] Run test suite (`gradlew test` / Robolectric tests) to verify all state transitions
+- [x] Connect the 4-dock orbital navigation bar in `MainActivity.kt`
+- [x] Remove obsolete habit and todo UI components and data structures
+- [x] Embed the ambient Cosmic Dragon widget in the global header across all tabs
+- [x] Apply cosmic styling (deep space background, hairline borders, stellar glows)
+- [x] Run test suite (`gradlew test` / Robolectric tests) to verify all state transitions

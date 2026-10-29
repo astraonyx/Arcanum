@@ -5,10 +5,10 @@ Deliver MT Explorer featuring a dual-pane file manager layout, scope switcher be
 
 **Blocked by:** 01-neon-dragon-icon-and-cosmic-theme-tokens, 02-omnipresent-cosmic-dragon-mascot
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Implement dual-pane directory explorer supporting external storage and vault directories
-- [ ] Add scope switcher toggle (`DEVICE_ALL` vs `VAULT_EXCLUSIVE`)
-- [ ] Build archive/APK inspector extracting manifest info and entry hierarchy
-- [ ] Build raw Hex/Text viewer modal for instant binary byte inspection
-- [ ] Wire 1-tap NYX2 encryption bridge from MT Explorer toolbar directly into VaultRepository
+- [x] Implement dual-pane directory explorer supporting external storage and vault directories
+- [x] Add scope switcher toggle (`DEVICE_ALL` vs `VAULT_EXCLUSIVE`)
+- [x] Build archive/APK inspector extracting manifest info and entry hierarchy
+- [x] Build raw Hex/Text viewer modal for instant binary byte inspection
+- [x] Wire 1-tap NYX2 encryption bridge from MT Explorer toolbar directly into VaultRepository
