@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -67,7 +68,12 @@ import com.example.ui.EncryptionScriptEngineScreen
 import com.example.ui.FirstRunOnboardingWizardScreen
 import com.example.ui.ForgotPinRecoveryDialog
 import com.example.ui.MoriDownloaderScreen
-import com.example.ui.MtExplorerScreen
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Shield
+import com.example.ui.theme.PastelSky
+import com.example.ui.theme.PastelLavender
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.CosmicPillDock
 import com.example.ui.SecondaryBiometricReAuthDialog
 import com.example.ui.SecurityGateScreen
 import com.example.ui.VaultDashboardAndFilesContent
@@ -143,6 +149,7 @@ fun TrantorVaultApp(
     val zipScannerState by viewModel.zipScannerState.collectAsStateWithLifecycle()
     val moriState by viewModel.moriState.collectAsStateWithLifecycle()
     val statusBannerMessage by viewModel.statusBannerMessage.collectAsStateWithLifecycle()
+    val activeMediaFolder by viewModel.activeMediaFolder.collectAsStateWithLifecycle()
 
     var showCreateSecretDialog by remember { mutableStateOf(false) }
 
@@ -308,14 +315,6 @@ fun TrantorVaultApp(
                     )
                 }
 
-                VaultTab.MT_EXPLORER -> {
-                    MtExplorerScreen(
-                        activeVaultId = activeVaultId,
-                        onEncryptFileToVault = viewModel::encryptLocalFileFromMt,
-                        onStatusMessage = viewModel::postBanner
-                    )
-                }
-
                 VaultTab.MORI_DOWNLOADER -> {
                     MoriDownloaderScreen(
                         activeVaultId = activeVaultId,
@@ -360,6 +359,10 @@ fun TrantorVaultApp(
                         activeVaultId = activeVaultId,
                         mediaState = mediaState,
                         allItems = allItems,
+                        activeMediaFolder = activeMediaFolder,
+                        onSelectMediaFolder = viewModel::selectMediaFolder,
+                        onMoveMediaItemToPlaylist = viewModel::moveMediaItemToPlaylist,
+                        onSetHold2xSpeed = viewModel::setHold2xSpeed,
                         onTogglePlayPause = viewModel::togglePlayPause,
                         onSeekToSeconds = viewModel::seekToSeconds,
                         onSkipTrack = viewModel::skipTrack,
@@ -383,9 +386,14 @@ fun TrantorVaultApp(
                         securityConfig = securityConfig,
                         onSaveScriptConfig = viewModel::saveScriptConfiguration,
                         onSaveVaultPins = viewModel::saveVaultPins,
+                        onAddNewVault = { p1, p2, p3 -> viewModel.addNewVault(p1, p2, p3) },
                         onSaveRecoveryCredentials = viewModel::saveRecoveryCredentials,
                         onToggleBiometricGate = viewModel::toggleBiometricGate,
-                        onLockVaultNow = viewModel::lockVaultNow
+                        onLockVaultNow = viewModel::lockVaultNow,
+                        onLinkGoogleAccount = { email -> viewModel.linkGoogleAccount(email, "Pengguna Arcanum") },
+                        onUnlinkGoogleAccount = { viewModel.unlinkGoogleAccount() },
+                        onBackupToCloud = { viewModel.backupActiveVaultToGoogleCloud(context) },
+                        onRestoreFromCloud = { file -> viewModel.restoreVaultFromEncryptedPackage(context, file) }
                     )
                 }
             }
@@ -554,53 +562,54 @@ private fun TrantorDockedBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
-                .shadow(12.dp, RoundedCornerShape(32.dp))
-                .clip(RoundedCornerShape(32.dp))
-                .background(VaultObsidian)
-                .padding(horizontal = 8.dp),
+                .height(66.dp)
+                .shadow(16.dp, RoundedCornerShape(36.dp))
+                .clip(RoundedCornerShape(36.dp))
+                .background(CosmicPillDock)
+                .border(1.dp, CosmicBorderHairline, RoundedCornerShape(36.dp))
+                .padding(horizontal = 10.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
             BottomNavPillItem(
                 label = "Brankas",
-                icon = Icons.Default.Home,
-                selected = activeTab == VaultTab.DASHBOARD,
+                icon = Icons.Default.Shield,
+                selected = activeTab == VaultTab.DASHBOARD || activeTab == VaultTab.FILES,
+                activeColor = StarlightCyan,
                 onClick = { onSelectTab(VaultTab.DASHBOARD) },
                 tag = "nav_tab_dashboard"
-            )
-            BottomNavPillItem(
-                label = "MT Tool",
-                icon = Icons.Default.Archive,
-                selected = activeTab == VaultTab.MT_EXPLORER,
-                onClick = { onSelectTab(VaultTab.MT_EXPLORER) },
-                tag = "nav_tab_mt_explorer"
             )
             BottomNavPillItem(
                 label = "Mori",
                 icon = Icons.Default.CloudDownload,
                 selected = activeTab == VaultTab.MORI_DOWNLOADER,
+                activeColor = PastelLavender,
                 onClick = { onSelectTab(VaultTab.MORI_DOWNLOADER) },
                 tag = "nav_tab_mori_downloader"
             )
             BottomNavPillItem(
-                label = "ZIP",
-                icon = Icons.Default.FolderZip,
-                selected = activeTab == VaultTab.ZIP_SCANNER,
-                onClick = { onSelectTab(VaultTab.ZIP_SCANNER) },
-                tag = "nav_tab_zip_scanner"
-            )
-            BottomNavPillItem(
-                label = "Player",
+                label = "Media",
                 icon = Icons.Default.PlayArrow,
                 selected = activeTab == VaultTab.MEDIA_PLAYER,
+                activeColor = PastelSky,
                 onClick = { onSelectTab(VaultTab.MEDIA_PLAYER) },
                 tag = "nav_tab_media_player"
             )
+            if (activeTab == VaultTab.ZIP_SCANNER) {
+                BottomNavPillItem(
+                    label = "ZIP",
+                    icon = Icons.Default.FolderZip,
+                    selected = true,
+                    activeColor = PastelPeach,
+                    onClick = { onSelectTab(VaultTab.ZIP_SCANNER) },
+                    tag = "nav_tab_zip_scanner"
+                )
+            }
             BottomNavPillItem(
-                label = "PIN",
-                icon = Icons.Default.Code,
+                label = "Pengaturan",
+                icon = Icons.Default.Settings,
                 selected = activeTab == VaultTab.SCRIPT_ENGINE,
+                activeColor = PastelPeach,
                 onClick = { onSelectTab(VaultTab.SCRIPT_ENGINE) },
                 tag = "nav_tab_script_engine"
             )
@@ -613,11 +622,12 @@ private fun BottomNavPillItem(
     label: String,
     icon: ImageVector,
     selected: Boolean,
+    activeColor: Color = StarlightCyan,
     onClick: () -> Unit,
     tag: String
 ) {
-    val bg = if (selected) StarlightCyan else Color.Transparent
-    val contentColor = if (selected) CosmicVoid else CosmicTextPure.copy(alpha = 0.75f)
+    val bg = if (selected) activeColor.copy(alpha = 0.22f) else Color.Transparent
+    val contentColor = if (selected) activeColor else CosmicTextPure.copy(alpha = 0.70f)
 
     Row(
         modifier = Modifier

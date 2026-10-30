@@ -1,10 +1,15 @@
 package com.example.ui
 
+import android.media.MediaPlayer
 import android.widget.VideoView
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,31 +25,43 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AudioFile
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Equalizer
-import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.VideoFile
+import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -54,11 +71,13 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import android.media.MediaPlayer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -75,33 +94,60 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import coil.compose.rememberAsyncImagePainter
+import com.example.R
 import com.example.data.VaultCategory
 import com.example.data.VaultItemEntity
+import com.example.ui.theme.CosmicBorderHairline
+import com.example.ui.theme.CosmicCardElevated
+import com.example.ui.theme.CosmicGlass
+import com.example.ui.theme.CosmicObsidian
+import com.example.ui.theme.CosmicSurface
+import com.example.ui.theme.CosmicTextMuted
+import com.example.ui.theme.CosmicTextPure
+import com.example.ui.theme.CosmicVoid
 import com.example.ui.theme.JetBrainsMonoFontFamily
-import com.example.ui.theme.VaultCharcoal
-import com.example.ui.theme.VaultCoral
-import com.example.ui.theme.VaultCream
-import com.example.ui.theme.VaultLime
-import com.example.ui.theme.VaultMintAccent
-import com.example.ui.theme.VaultMintCard
-import com.example.ui.theme.VaultObsidian
-import com.example.ui.theme.VaultPureWhite
-import com.example.ui.theme.VaultTextMuted
+import com.example.ui.theme.NebulaViolet
+import com.example.ui.theme.PastelLavender
+import com.example.ui.theme.PastelMint
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.PastelRose
+import com.example.ui.theme.PastelSky
+import com.example.ui.theme.PastelYellow
+import com.example.ui.theme.StarlightCyan
 import java.io.File
 import kotlin.math.sin
 
+/**
+ * Unified Media Hub:
+ * 3-Way Apple Minimalist Sub-Tabs:
+ *   0 -> [Video & Scoped Playlist]
+ *   1 -> [Musik & Audio Stream]
+ *   2 -> [Galeri Foto & Stiker]
+ *
+ * Strict Multi-Vault Isolation: all queries filtered strictly by `activeVaultId`.
+ * Scoped Folders: Videos from other folders are never queued or played next!
+ * Hold-to-2x Speed: Pressing and holding video accelerates playback to 2.0x with "2X CEPAT" HUD.
+ */
 @Composable
 fun VaultMediaPlayerScreen(
     activeVaultId: Int,
     mediaState: MediaPlayerUiState,
     allItems: List<VaultItemEntity>,
+    activeMediaFolder: String? = null,
+    onSelectMediaFolder: (String?) -> Unit = {},
+    onMoveMediaItemToPlaylist: (VaultItemEntity, String) -> Unit = { _, _ -> },
+    onSetHold2xSpeed: (Boolean) -> Unit = {},
     onTogglePlayPause: () -> Unit,
     onSeekToSeconds: (Int) -> Unit,
     onSkipTrack: (Boolean) -> Unit,
@@ -113,148 +159,413 @@ fun VaultMediaPlayerScreen(
     onToggleRepeat: () -> Unit,
     onImportMediaOrZipClick: () -> Unit
 ) {
-    val allPlayableItems = remember(allItems) {
-        allItems.filter {
-            it.category == VaultCategory.VIDEO.name ||
-                    it.category == VaultCategory.AUDIO.name ||
-                    it.category == VaultCategory.IMAGE.name
-        }
+    // 0: Video, 1: Musik, 2: Galeri Foto
+    var mediaSubTab by remember { mutableIntStateOf(0) }
+
+    // Strict multi-vault isolation: items must belong to the active vault
+    val vaultItems = remember(allItems, activeVaultId) {
+        allItems.filter { it.vaultProfileId == activeVaultId }
     }
 
-    val currentTrack = mediaState.currentTrack ?: allPlayableItems.firstOrNull()
-    val currentZipGroup = currentTrack?.groupArchiveName
-
-    var playlistFilterMode by remember { mutableIntStateOf(0) }
-
-    val displayedPlaylist = remember(allPlayableItems, currentZipGroup, playlistFilterMode) {
-        when (playlistFilterMode) {
-            1 -> {
-                if (!currentZipGroup.isNullOrBlank()) {
-                    allPlayableItems.filter { it.groupArchiveName == currentZipGroup }
-                } else {
-                    allPlayableItems
-                }
-            }
-            2 -> allPlayableItems.filter { it.category == VaultCategory.VIDEO.name }
-            3 -> allPlayableItems.filter { it.category != VaultCategory.VIDEO.name }
-            else -> {
-                if (!currentZipGroup.isNullOrBlank()) {
-                    val sameZip = allPlayableItems.filter { it.groupArchiveName == currentZipGroup }
-                    val others = allPlayableItems.filter { it.groupArchiveName != currentZipGroup }
-                    sameZip + others
-                } else {
-                    allPlayableItems
-                }
-            }
-        }
+    val videoItems = remember(vaultItems) {
+        vaultItems.filter { it.category == VaultCategory.VIDEO.name }
     }
 
-    if (allPlayableItems.isEmpty()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp)
-                .testTag("media_player_empty_state"),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            NyxMascotAvatar(mood = MascotMood.WAVE_HELLO, size = 104.dp)
-            Spacer(modifier = Modifier.height(14.dp))
-            Text(
-                text = "Belum Ada Media di Brankas $activeVaultId",
-                style = MaterialTheme.typography.headlineMedium,
-                color = VaultObsidian,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Impor video (MP4/MOV), audio, gambar, atau paket .ZIP untuk memutar dan mengekspornya dengan aman.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = VaultTextMuted,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(18.dp))
-            Button(
-                onClick = onImportMediaOrZipClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .testTag("player_empty_import_button"),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = VaultObsidian,
-                    contentColor = VaultLime
-                )
-            ) {
-                Icon(Icons.Default.UploadFile, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Impor Video atau Paket .ZIP", style = MaterialTheme.typography.labelLarge)
-            }
-        }
-        return
+    val audioItems = remember(vaultItems) {
+        vaultItems.filter { it.category == VaultCategory.AUDIO.name }
     }
+
+    val photoItems = remember(vaultItems) {
+        vaultItems.filter { it.category == VaultCategory.IMAGE.name }
+    }
+
+    // Modal state for creating new playlist
+    var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+    var newPlaylistInputName by remember { mutableStateOf("") }
+
+    // Modal state for moving video into playlist
+    var movingVideoItem by remember { mutableStateOf<VaultItemEntity?>(null) }
+    var moveTargetPlaylistName by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(CosmicVoid)
             .testTag("media_player_screen")
     ) {
-        // 1. DOCKED TOP 16:9 VIDEO & MEDIA STAGE
-        if (currentTrack != null) {
-            YouTubeDockedVideoStage(
-                track = currentTrack,
+        // --- 1. TOP APPLE MINIMALIST PASTEL SUB-TAB BAR ---
+        Surface(
+            color = CosmicObsidian,
+            modifier = Modifier.fillMaxWidth(),
+            border = androidx.compose.foundation.BorderStroke(1.dp, CosmicBorderHairline)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MediaSubTabPill(
+                    label = "Video (${videoItems.size})",
+                    icon = Icons.Default.VideoLibrary,
+                    selected = mediaSubTab == 0,
+                    activeColor = PastelSky,
+                    onClick = { mediaSubTab = 0 }
+                )
+                MediaSubTabPill(
+                    label = "Musik (${audioItems.size})",
+                    icon = Icons.Default.MusicNote,
+                    selected = mediaSubTab == 1,
+                    activeColor = PastelLavender,
+                    onClick = { mediaSubTab = 1 }
+                )
+                MediaSubTabPill(
+                    label = "Foto (${photoItems.size})",
+                    icon = Icons.Default.PhotoLibrary,
+                    selected = mediaSubTab == 2,
+                    activeColor = PastelPeach,
+                    onClick = { mediaSubTab = 2 }
+                )
+            }
+        }
+
+        // --- 2. SUB-TAB VIEWPORT ---
+        when (mediaSubTab) {
+            0 -> {
+                // SUB-TAB 0: VIDEO & SCOPED PLAYLISTS
+                VideoStageAndScopedPlaylistView(
+                    activeVaultId = activeVaultId,
+                    videoItems = videoItems,
+                    mediaState = mediaState,
+                    activeMediaFolder = activeMediaFolder,
+                    onSelectMediaFolder = onSelectMediaFolder,
+                    onCreatePlaylistClick = {
+                        newPlaylistInputName = ""
+                        showCreatePlaylistDialog = true
+                    },
+                    onMoveItemClick = { item ->
+                        movingVideoItem = item
+                        moveTargetPlaylistName = item.groupArchiveName ?: ""
+                    },
+                    onSetHold2xSpeed = onSetHold2xSpeed,
+                    onTogglePlayPause = onTogglePlayPause,
+                    onSeekToSeconds = onSeekToSeconds,
+                    onSkipTrack = onSkipTrack,
+                    onSelectOrOpenMedia = onSelectOrOpenMedia,
+                    onOpenFullscreenOverlay = onOpenFullscreenOverlay,
+                    onRequestPinToggleEncrypt = onRequestPinToggleEncrypt,
+                    onRequestExportOrShareWithBiometric = onRequestExportOrShareWithBiometric,
+                    onCycleSpeed = onCycleSpeed,
+                    onToggleRepeat = onToggleRepeat,
+                    onImportMediaClick = onImportMediaOrZipClick
+                )
+            }
+
+            1 -> {
+                // SUB-TAB 1: DEDICATED AUDIO & MUSIC STREAM
+                MusicStreamAndAudioPlaylistView(
+                    activeVaultId = activeVaultId,
+                    audioItems = audioItems,
+                    mediaState = mediaState,
+                    onTogglePlayPause = onTogglePlayPause,
+                    onSeekToSeconds = onSeekToSeconds,
+                    onSkipTrack = onSkipTrack,
+                    onSelectOrOpenMedia = onSelectOrOpenMedia,
+                    onRequestPinToggleEncrypt = onRequestPinToggleEncrypt,
+                    onRequestExportOrShareWithBiometric = onRequestExportOrShareWithBiometric,
+                    onToggleRepeat = onToggleRepeat,
+                    onImportAudioClick = onImportMediaOrZipClick
+                )
+            }
+
+            2 -> {
+                // SUB-TAB 2: DEDICATED PHOTO & STICKER SQUIRCLE GALLERY
+                PhotoGallerySquircleView(
+                    activeVaultId = activeVaultId,
+                    photoItems = photoItems,
+                    onSelectOrOpenPhoto = onOpenFullscreenOverlay,
+                    onRequestPinToggleEncrypt = onRequestPinToggleEncrypt,
+                    onRequestExportOrShareWithBiometric = onRequestExportOrShareWithBiometric,
+                    onImportPhotoClick = onImportMediaOrZipClick
+                )
+            }
+        }
+    }
+
+    // Modal: Buat Playlist Baru
+    if (showCreatePlaylistDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreatePlaylistDialog = false },
+            title = {
+                Text("Buat Playlist / Folder Baru", color = CosmicTextPure, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column {
+                    Text(
+                        "Masukkan nama playlist baru untuk mengelompokkan video secara terisolasi.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CosmicTextMuted
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = newPlaylistInputName,
+                        onValueChange = { newPlaylistInputName = it },
+                        label = { Text("Nama Playlist / Folder") },
+                        placeholder = { Text("misal: Video Belajar, Liburan, Favorit") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = CosmicVoid,
+                            unfocusedContainerColor = CosmicVoid,
+                            focusedBorderColor = PastelSky,
+                            unfocusedBorderColor = CosmicSurface,
+                            focusedTextColor = CosmicTextPure,
+                            unfocusedTextColor = CosmicTextPure
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val name = newPlaylistInputName.trim()
+                        if (name.isNotBlank()) {
+                            onSelectMediaFolder(name)
+                        }
+                        showCreatePlaylistDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PastelSky, contentColor = CosmicVoid),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Buat & Buka Playlist", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showCreatePlaylistDialog = false },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Batal", color = CosmicTextPure)
+                }
+            },
+            containerColor = CosmicObsidian,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    // Modal: Pindahkan Video ke Playlist
+    if (movingVideoItem != null) {
+        val item = movingVideoItem!!
+        val availablePlaylists = remember(videoItems) {
+            videoItems.mapNotNull { it.groupArchiveName }.filter { it.isNotBlank() }.distinct()
+        }
+
+        AlertDialog(
+            onDismissRequest = { movingVideoItem = null },
+            title = {
+                Text("Pindahkan ke Playlist", color = CosmicTextPure, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column {
+                    Text(
+                        "Pindahkan '${item.name}' ke folder/playlist pilihan agar video lain tidak ikut terputar saat folder dipilih.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CosmicTextMuted
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = moveTargetPlaylistName,
+                        onValueChange = { moveTargetPlaylistName = it },
+                        label = { Text("Nama Playlist Target") },
+                        placeholder = { Text("Ketik nama folder/playlist") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = CosmicVoid,
+                            unfocusedContainerColor = CosmicVoid,
+                            focusedBorderColor = PastelPeach,
+                            unfocusedBorderColor = CosmicSurface,
+                            focusedTextColor = CosmicTextPure,
+                            unfocusedTextColor = CosmicTextPure
+                        )
+                    )
+
+                    if (availablePlaylists.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text("Atau pilih playlist yang sudah ada:", style = MaterialTheme.typography.labelSmall, color = CosmicTextMuted)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            availablePlaylists.forEach { pName ->
+                                Surface(
+                                    color = if (moveTargetPlaylistName == pName) PastelPeach.copy(alpha = 0.25f) else CosmicSurface,
+                                    shape = RoundedCornerShape(50),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, if (moveTargetPlaylistName == pName) PastelPeach else CosmicBorderHairline),
+                                    modifier = Modifier.clickable { moveTargetPlaylistName = pName }
+                                ) {
+                                    Text(
+                                        text = pName,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (moveTargetPlaylistName == pName) PastelPeach else CosmicTextPure,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val target = moveTargetPlaylistName.trim()
+                        if (target.isNotBlank()) {
+                            onMoveMediaItemToPlaylist(item, target)
+                        }
+                        movingVideoItem = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PastelPeach, contentColor = CosmicVoid),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Pindahkan Video", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { movingVideoItem = null },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Batal", color = CosmicTextPure)
+                }
+            },
+            containerColor = CosmicObsidian,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+}
+
+@Composable
+private fun MediaSubTabPill(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    selected: Boolean,
+    activeColor: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = if (selected) activeColor.copy(alpha = 0.18f) else Color.Transparent,
+        shape = RoundedCornerShape(50),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (selected) activeColor.copy(alpha = 0.65f) else CosmicBorderHairline
+        ),
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (selected) activeColor else CosmicTextMuted,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (selected) activeColor else CosmicTextPure.copy(alpha = 0.75f),
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+            )
+        }
+    }
+}
+
+/**
+ * Sub-Tab 0: Video Stage, Hold-to-2x Gesture, Repeat Modes & Scoped Playlists.
+ */
+@Composable
+private fun VideoStageAndScopedPlaylistView(
+    activeVaultId: Int,
+    videoItems: List<VaultItemEntity>,
+    mediaState: MediaPlayerUiState,
+    activeMediaFolder: String?,
+    onSelectMediaFolder: (String?) -> Unit,
+    onCreatePlaylistClick: () -> Unit,
+    onMoveItemClick: (VaultItemEntity) -> Unit,
+    onSetHold2xSpeed: (Boolean) -> Unit,
+    onTogglePlayPause: () -> Unit,
+    onSeekToSeconds: (Int) -> Unit,
+    onSkipTrack: (Boolean) -> Unit,
+    onSelectOrOpenMedia: (VaultItemEntity) -> Unit,
+    onOpenFullscreenOverlay: (VaultItemEntity) -> Unit,
+    onRequestPinToggleEncrypt: (VaultItemEntity) -> Unit,
+    onRequestExportOrShareWithBiometric: (VaultItemEntity, Boolean) -> Unit,
+    onCycleSpeed: () -> Unit,
+    onToggleRepeat: () -> Unit,
+    onImportMediaClick: () -> Unit
+) {
+    // Collect all unique folder/playlist names from existing videos
+    val existingPlaylists = remember(videoItems) {
+        videoItems.mapNotNull { it.groupArchiveName }.filter { it.isNotBlank() }.distinct()
+    }
+
+    // STRICT FOLDER-SCOPED QUEUE:
+    // If activeMediaFolder is selected, ONLY videos inside this folder are rendered and auto-played!
+    val scopedVideoPlaylist = remember(videoItems, activeMediaFolder) {
+        if (!activeMediaFolder.isNullOrBlank()) {
+            videoItems.filter { it.groupArchiveName == activeMediaFolder }
+        } else {
+            videoItems
+        }
+    }
+
+    val currentVideo = mediaState.currentTrack?.takeIf { it.category == VaultCategory.VIDEO.name }
+        ?: scopedVideoPlaylist.firstOrNull()
+
+    if (videoItems.isEmpty()) {
+        EmptyMediaCategoryState(
+            title = "Belum Ada Video di Brankas $activeVaultId",
+            subtitle = "Impor video (MP4/MKV) atau unduh melalui Mori Downloader.",
+            buttonText = "Impor Video ke Brankas",
+            onClickImport = onImportMediaClick
+        )
+        return
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // 1. DOCKED TOP 16:9 VIDEO STAGE WITH PRESS-AND-HOLD 2X SPEED
+        if (currentVideo != null) {
+            AppleMinimalistVideoStage(
+                track = currentVideo,
                 mediaState = mediaState,
+                onSetHold2xSpeed = onSetHold2xSpeed,
                 onTogglePlayPause = onTogglePlayPause,
                 onSeekToSeconds = onSeekToSeconds,
                 onSkipPrevious = { onSkipTrack(false) },
                 onSkipNext = { onSkipTrack(true) },
                 onCycleSpeed = onCycleSpeed,
                 onToggleRepeat = onToggleRepeat,
-                onOpenFullscreen = { onOpenFullscreenOverlay(currentTrack) },
-                onRequestPinDecrypt = { onRequestPinToggleEncrypt(currentTrack) }
+                onOpenFullscreen = { onOpenFullscreenOverlay(currentVideo) },
+                onRequestPinDecrypt = { onRequestPinToggleEncrypt(currentVideo) }
             )
         }
 
-        // 2. MINIMALIST SCROLLABLE TRACK CONTROLS & PLAYLIST
+        // 2. FOLDER / PLAYLIST PICKER CHIPS ROW & UP NEXT LIST
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 112.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            if (currentTrack != null) {
-                item {
-                    ActiveTrackMetadataCard(
-                        track = currentTrack,
-                        activeVaultId = activeVaultId,
-                        onRequestPinToggleEncrypt = { onRequestPinToggleEncrypt(currentTrack) },
-                        onRequestShareWithBiometric = {
-                            onRequestExportOrShareWithBiometric(currentTrack, true)
-                        },
-                        onRequestExportWithBiometric = {
-                            onRequestExportOrShareWithBiometric(currentTrack, false)
-                        },
-                        onOpenFullscreen = { onOpenFullscreenOverlay(currentTrack) },
-                        onImportMoreClick = onImportMediaOrZipClick
-                    )
-                }
-            }
-
-            item {
-                NyxMascotCompanionBanner(
-                    activeVaultId = activeVaultId,
-                    headline = if (mediaState.isPlaying) {
-                        "Asyik! Sedang memutar ${currentTrack?.name ?: "Media"}"
-                    } else {
-                        "Ketuk video di bawah untuk langsung menonton!"
-                    },
-                    subtitle = "Ketuk maskot untuk lompatan selebrasi ala Duolingo",
-                    mood = if (mediaState.isPlaying) MascotMood.HAPPY_VIBES else MascotMood.WAVE_HELLO
-                )
-            }
-
-            // Minimalist Playlist Header & Filter Chips
+            // Folder / Playlist Selection Chips
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
@@ -262,30 +573,21 @@ fun VaultMediaPlayerScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlaylistPlay,
-                                contentDescription = null,
-                                tint = VaultObsidian
-                            )
-                            Text(
-                                text = if (!currentZipGroup.isNullOrBlank()) {
-                                    "Playlist ZIP & Brankas (${displayedPlaylist.size})"
-                                } else {
-                                    "Antrean Media (${displayedPlaylist.size})"
-                                },
-                                style = MaterialTheme.typography.titleMedium,
-                                color = VaultObsidian,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Text(
+                            text = if (activeMediaFolder != null) "Folder: $activeMediaFolder" else "Semua Video (${scopedVideoPlaylist.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = CosmicTextPure,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                        NyxMascotAvatar(
-                            mood = if (mediaState.isPlaying) MascotMood.HAPPY_VIBES else MascotMood.GUARD_ALERT,
-                            size = 32.dp
+                        Text(
+                            text = when (mediaState.repeatMode) {
+                                PlaybackRepeatMode.REPEAT_ONE -> "🔁 Ulangi 1"
+                                PlaybackRepeatMode.AUTO_ADVANCE -> "⏭️ Auto Lanjut"
+                                PlaybackRepeatMode.REPEAT_PLAYLIST -> "🔁 Ulangi Folder"
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = PastelSky
                         )
                     }
 
@@ -293,94 +595,125 @@ fun VaultMediaPlayerScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // "Semua Video" Chip
                         FilterChip(
-                            selected = playlistFilterMode == 0,
-                            onClick = { playlistFilterMode = 0 },
-                            label = { Text("Semua (${allPlayableItems.size})") },
+                            selected = activeMediaFolder == null,
+                            onClick = { onSelectMediaFolder(null) },
+                            label = { Text("Semua (${videoItems.size})") },
                             shape = RoundedCornerShape(50),
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = VaultObsidian,
-                                selectedLabelColor = VaultLime
+                                selectedContainerColor = PastelSky.copy(alpha = 0.22f),
+                                selectedLabelColor = PastelSky,
+                                containerColor = CosmicObsidian,
+                                labelColor = CosmicTextMuted
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (activeMediaFolder == null) PastelSky else CosmicBorderHairline
                             )
                         )
 
-                        if (!currentZipGroup.isNullOrBlank()) {
-                            val sameZipCount = allPlayableItems.count { it.groupArchiveName == currentZipGroup }
+                        // "+ Playlist Baru" Action Chip
+                        Surface(
+                            color = PastelPeach.copy(alpha = 0.18f),
+                            shape = RoundedCornerShape(50),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, PastelPeach.copy(alpha = 0.6f)),
+                            modifier = Modifier.clickable(onClick = onCreatePlaylistClick)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, tint = PastelPeach, modifier = Modifier.size(15.dp))
+                                Text("+ Playlist Baru", style = MaterialTheme.typography.labelMedium, color = PastelPeach, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        // Each existing playlist chip
+                        existingPlaylists.forEach { pName ->
+                            val count = videoItems.count { it.groupArchiveName == pName }
                             FilterChip(
-                                selected = playlistFilterMode == 1,
-                                onClick = { playlistFilterMode = 1 },
+                                selected = activeMediaFolder == pName,
+                                onClick = { onSelectMediaFolder(pName) },
                                 leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.FolderZip,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(15.dp)
-                                    )
+                                    Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(15.dp))
                                 },
-                                label = { Text("ZIP: $currentZipGroup ($sameZipCount)") },
+                                label = { Text("$pName ($count)") },
                                 shape = RoundedCornerShape(50),
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = VaultLime,
-                                    selectedLabelColor = VaultObsidian
+                                    selectedContainerColor = PastelPeach.copy(alpha = 0.25f),
+                                    selectedLabelColor = PastelPeach,
+                                    containerColor = CosmicObsidian,
+                                    labelColor = CosmicTextMuted
+                                ),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (activeMediaFolder == pName) PastelPeach else CosmicBorderHairline
                                 )
                             )
                         }
-
-                        FilterChip(
-                            selected = playlistFilterMode == 2,
-                            onClick = { playlistFilterMode = 2 },
-                            label = { Text("Video") },
-                            shape = RoundedCornerShape(50),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = VaultObsidian,
-                                selectedLabelColor = VaultLime
-                            )
-                        )
-
-                        FilterChip(
-                            selected = playlistFilterMode == 3,
-                            onClick = { playlistFilterMode = 3 },
-                            label = { Text("Audio & Gambar") },
-                            shape = RoundedCornerShape(50),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = VaultObsidian,
-                                selectedLabelColor = VaultLime
-                            )
-                        )
                     }
                 }
             }
 
-            // Minimalist Up Next Video / Media Rows with Export/Share Button
-            itemsIndexed(displayedPlaylist, key = { _, item -> item.id }) { index, item ->
-                val isCurrentlySelected = currentTrack?.id == item.id
-                val isSameZipAsCurrent = !currentZipGroup.isNullOrBlank() && item.groupArchiveName == currentZipGroup
-
-                YouTubeUpNextVideoRow(
-                    index = index + 1,
-                    item = item,
-                    isSelected = isCurrentlySelected,
-                    isPlaying = isCurrentlySelected && mediaState.isPlaying,
-                    isSameZipSibling = isSameZipAsCurrent,
-                    onClickPlay = { onSelectOrOpenMedia(item) },
-                    onClickPinLockToggle = { onRequestPinToggleEncrypt(item) },
-                    onClickShareWithBiometric = {
-                        onRequestExportOrShareWithBiometric(item, true)
-                    },
-                    onClickExportWithBiometric = {
-                        onRequestExportOrShareWithBiometric(item, false)
+            // Up Next Videos Queue (Scoped strictly to chosen folder)
+            if (scopedVideoPlaylist.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = CosmicObsidian)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "Playlist '$activeMediaFolder' masih kosong.",
+                                color = CosmicTextMuted,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Pindahkan video ke playlist ini menggunakan tombol folder pada daftar video.",
+                                color = CosmicTextMuted.copy(alpha = 0.7f),
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
-                )
+                }
+            } else {
+                itemsIndexed(scopedVideoPlaylist, key = { _, item -> item.id }) { index, item ->
+                    val isPlayingNow = currentVideo?.id == item.id
+                    ScopedVideoItemRow(
+                        index = index + 1,
+                        item = item,
+                        isSelected = isPlayingNow,
+                        isPlaying = isPlayingNow && mediaState.isPlaying,
+                        onClickPlay = { onSelectOrOpenMedia(item) },
+                        onMoveClick = { onMoveItemClick(item) },
+                        onClickPinToggle = { onRequestPinToggleEncrypt(item) },
+                        onClickShare = { onRequestExportOrShareWithBiometric(item, true) }
+                    )
+                }
             }
         }
     }
 }
 
+/**
+ * Apple Minimalist Video Stage with Press-and-Hold 2x Acceleration.
+ */
 @Composable
-private fun YouTubeDockedVideoStage(
+private fun AppleMinimalistVideoStage(
     track: VaultItemEntity,
     mediaState: MediaPlayerUiState,
+    onSetHold2xSpeed: (Boolean) -> Unit,
     onTogglePlayPause: () -> Unit,
     onSeekToSeconds: (Int) -> Unit,
     onSkipPrevious: () -> Unit,
@@ -390,69 +723,23 @@ private fun YouTubeDockedVideoStage(
     onOpenFullscreen: () -> Unit,
     onRequestPinDecrypt: () -> Unit
 ) {
-    val isVideo = track.category == VaultCategory.VIDEO.name
-    val isAudio = track.category == VaultCategory.AUDIO.name
     val plainFile = remember(track.internalPlainPath) { File(track.internalPlainPath) }
     var videoDecodeError by remember(track.id, track.internalPlainPath) { mutableStateOf(false) }
-
-    // Pemutar Audio Nyata (MediaPlayer) untuk file WAV / MP3 / M4A dari Mori atau Brankas
-    val audioPlayerRef = remember(track.id, track.internalPlainPath, track.isEncrypted) {
-        if (isAudio && !track.isEncrypted && plainFile.exists() && plainFile.length() > 64L) {
-            try {
-                MediaPlayer().apply {
-                    setDataSource(plainFile.absolutePath)
-                    isLooping = true
-                    prepare()
-                }
-            } catch (_: Exception) {
-                null
-            }
-        } else {
-            null
-        }
-    }
-
-    LaunchedEffect(audioPlayerRef, mediaState.isPlaying, mediaState.currentSeconds, mediaState.playbackSpeed) {
-        try {
-            if (audioPlayerRef != null) {
-                if (mediaState.isPlaying && !audioPlayerRef.isPlaying) {
-                    audioPlayerRef.start()
-                } else if (!mediaState.isPlaying && audioPlayerRef.isPlaying) {
-                    audioPlayerRef.pause()
-                }
-
-                // Two-way seek sync for audio
-                val audioPosSec = audioPlayerRef.currentPosition / 1000
-                if (kotlin.math.abs(audioPosSec - mediaState.currentSeconds) > 1) {
-                    audioPlayerRef.seekTo(mediaState.currentSeconds * 1000)
-                }
-
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                    audioPlayerRef.playbackParams = audioPlayerRef.playbackParams.setSpeed(mediaState.playbackSpeed)
-                }
-            }
-        } catch (_: Exception) {
-        }
-    }
-
-    DisposableEffect(audioPlayerRef) {
-        onDispose {
-            try {
-                audioPlayerRef?.stop()
-            } catch (_: Exception) {
-            }
-            try {
-                audioPlayerRef?.release()
-            } catch (_: Exception) {
-            }
-        }
-    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(16f / 9f)
-            .background(VaultObsidian)
+            .background(CosmicVoid)
+            // HOLD-TO-2X ACCELERATION GESTURE:
+            .pointerInput(track.id) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    onSetHold2xSpeed(true)
+                    waitForUpOrCancellation()
+                    onSetHold2xSpeed(false)
+                }
+            }
     ) {
         if (track.isEncrypted) {
             Column(
@@ -462,35 +749,32 @@ private fun YouTubeDockedVideoStage(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                NyxMascotAvatar(mood = MascotMood.GUARD_ALERT, size = 56.dp)
+                Icon(Icons.Default.Lock, contentDescription = null, tint = PastelRose, modifier = Modifier.size(36.dp))
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "File Terenkripsi NYX2",
+                    text = "Video Terenkripsi AES-256",
                     style = MaterialTheme.typography.titleMedium,
-                    color = VaultPureWhite
+                    color = CosmicTextPure,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Masukkan PIN untuk memutar '${track.name}.${track.extension}'",
+                    text = "Buka kunci untuk memutar: ${track.name}.${track.extension}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = VaultPureWhite.copy(alpha = 0.72f),
+                    color = CosmicTextMuted,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Button(
                     onClick = onRequestPinDecrypt,
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = VaultLime,
-                        contentColor = VaultObsidian
-                    ),
-                    modifier = Modifier.testTag("decrypt_and_play_button")
+                    colors = ButtonDefaults.buttonColors(containerColor = PastelSky, contentColor = CosmicVoid)
                 ) {
                     Icon(Icons.Default.LockOpen, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Buka PIN & Putar", style = MaterialTheme.typography.labelLarge)
+                    Text("Buka PIN & Putar", fontWeight = FontWeight.Bold)
                 }
             }
-        } else if (isVideo && !videoDecodeError && plainFile.exists()) {
+        } else if (!videoDecodeError && plainFile.exists()) {
             key(track.id, track.internalPlainPath) {
                 AndroidView(
                     factory = { ctx ->
@@ -501,10 +785,11 @@ private fun YouTubeDockedVideoStage(
                             }
                             setVideoPath(plainFile.absolutePath)
                             setOnPreparedListener { mp ->
-                                mp.isLooping = mediaState.isRepeatEnabled
+                                mp.isLooping = mediaState.repeatMode == PlaybackRepeatMode.REPEAT_ONE
                                 try {
                                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                                        mp.playbackParams = mp.playbackParams.setSpeed(mediaState.playbackSpeed)
+                                        val effectiveSpeed = if (mediaState.isHold2xActive) 2.0f else mediaState.playbackSpeed
+                                        mp.playbackParams = mp.playbackParams.setSpeed(effectiveSpeed)
                                     }
                                 } catch (_: Exception) {
                                 }
@@ -513,7 +798,7 @@ private fun YouTubeDockedVideoStage(
                                 }
                             }
                             setOnCompletionListener {
-                                if (mediaState.isRepeatEnabled) {
+                                if (mediaState.repeatMode == PlaybackRepeatMode.REPEAT_ONE) {
                                     start()
                                 } else {
                                     onSkipNext()
@@ -529,9 +814,9 @@ private fun YouTubeDockedVideoStage(
                                 videoView.pause()
                             }
 
-                            // Two-way synchronized seeking
                             val currentPosSec = videoView.currentPosition / 1000
-                            if (kotlin.math.abs(currentPosSec - mediaState.currentSeconds) > 1) {
+                            val diffSec = kotlin.math.abs(currentPosSec - mediaState.currentSeconds)
+                            if (diffSec >= 3) {
                                 videoView.seekTo(mediaState.currentSeconds * 1000)
                             }
                         } catch (_: Exception) {
@@ -541,416 +826,138 @@ private fun YouTubeDockedVideoStage(
                 )
             }
         } else {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val w = size.width
-                val h = size.height
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFF141E24), Color(0xFF0E1317))
-                    )
-                )
-                val barCount = 28
-                val barW = (w * 0.76f) / barCount
-                val startX = w * 0.12f
-                val centerY = h * 0.46f
-                for (i in 0 until barCount) {
-                    val wave = if (mediaState.isPlaying) {
-                        0.2f + 0.75f * kotlin.math.abs(sin((i * 0.55f) + mediaState.currentSeconds))
-                    } else 0.18f
-                    val barH = (h * 0.42f) * wave
-                    drawLine(
-                        color = if (i % 2 == 0) VaultLime else VaultMintCard,
-                        start = Offset(startX + i * barW, centerY - barH * 0.5f),
-                        end = Offset(startX + i * barW, centerY + barH * 0.5f),
-                        strokeWidth = (barW * 0.55f).coerceAtLeast(4f),
-                        cap = StrokeCap.Round
+            // Placeholder / Audio preview stage
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(CosmicSurface),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.VideoFile, contentDescription = null, tint = PastelSky, modifier = Modifier.size(48.dp))
+            }
+        }
+
+        // --- FLOATING HUD BADGE: "2X CEPAT" (Appears while holding finger on video) ---
+        if (mediaState.isHold2xActive) {
+            Surface(
+                color = Color(0xEE090D1A),
+                shape = RoundedCornerShape(50),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, PastelSky),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(Icons.Default.FastForward, contentDescription = null, tint = PastelSky, modifier = Modifier.size(16.dp))
+                    Text(
+                        text = "⚡ 2X CEPAT",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = PastelSky,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = JetBrainsMonoFontFamily
                     )
                 }
             }
         }
 
-        if (!track.isEncrypted) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(VaultObsidian.copy(alpha = 0.8f), Color.Transparent)
-                        )
+        // --- DOCKED MINIMALIST VIDEO CONTROLS OVERLAY ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color(0xCC050814))
                     )
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Surface(
-                        color = VaultLime,
-                        shape = RoundedCornerShape(6.dp)
-                    ) {
-                        Text(
-                            text = track.extension.uppercase(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = VaultObsidian,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                    if (!track.groupArchiveName.isNullOrBlank()) {
-                        Surface(
-                            color = VaultObsidian.copy(alpha = 0.75f),
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            Text(
-                                text = "ZIP: ${track.groupArchiveName}",
-                                fontSize = 10.sp,
-                                color = VaultMintCard,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
+                )
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            Column {
+                // Seek Bar
+                Slider(
+                    value = mediaState.currentSeconds.toFloat(),
+                    onValueChange = { onSeekToSeconds(it.toInt()) },
+                    valueRange = 0f..mediaState.totalSeconds.toFloat().coerceAtLeast(1f),
+                    colors = SliderDefaults.colors(
+                        thumbColor = PastelSky,
+                        activeTrackColor = PastelSky,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.25f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(20.dp)
+                )
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(VaultObsidian.copy(alpha = 0.75f))
-                            .instantTouchPress { onCycleSpeed() }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .testTag("player_speed_button")
-                    ) {
-                        Text(
-                            text = "${mediaState.playbackSpeed}x",
-                            fontFamily = JetBrainsMonoFontFamily,
-                            fontSize = 11.sp,
-                            color = VaultLime
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                if (mediaState.isRepeatEnabled) VaultLime else VaultObsidian.copy(alpha = 0.75f)
-                            )
-                            .instantTouchPress { onToggleRepeat() }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .testTag("player_repeat_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Repeat,
-                            contentDescription = "Loop",
-                            tint = if (mediaState.isRepeatEnabled) VaultObsidian else VaultPureWhite,
-                            modifier = Modifier.size(15.dp)
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(VaultObsidian.copy(alpha = 0.75f))
-                            .instantTouchPress { onOpenFullscreen() }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .testTag("open_fullscreen_viewer_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Fullscreen,
-                            contentDescription = "Layar Penuh",
-                            tint = VaultPureWhite,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, VaultObsidian.copy(alpha = 0.92f))
-                        )
-                    )
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Current / Total time
+                    Text(
+                        text = "${formatSec(mediaState.currentSeconds)} / ${formatSec(mediaState.totalSeconds)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CosmicTextPure,
+                        fontFamily = JetBrainsMonoFontFamily
+                    )
+
+                    // Control buttons
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(
-                            onClick = onSkipPrevious,
-                            modifier = Modifier
-                                .size(34.dp)
-                                .testTag("player_prev_button")
-                        ) {
-                            Icon(Icons.Default.SkipPrevious, contentDescription = "Sebelumnya", tint = VaultPureWhite)
+                        IconButton(onClick = onSkipPrevious) {
+                            Icon(Icons.Default.SkipPrevious, contentDescription = "Sebelumnya", tint = CosmicTextPure)
                         }
 
-                        IconButton(
-                            onClick = { onSeekToSeconds((mediaState.currentSeconds - 10).coerceAtLeast(0)) },
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Icon(Icons.Default.Replay10, contentDescription = "-10s", tint = VaultPureWhite)
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(VaultLime)
-                                .instantTouchPress { onTogglePlayPause() }
-                                .testTag("player_play_pause_button"),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        IconButton(onClick = onTogglePlayPause) {
                             Icon(
                                 imageVector = if (mediaState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = "Putar/Jeda",
-                                tint = VaultObsidian,
-                                modifier = Modifier.size(22.dp)
+                                contentDescription = if (mediaState.isPlaying) "Pause" else "Play",
+                                tint = PastelSky,
+                                modifier = Modifier.size(28.dp)
                             )
                         }
 
-                        IconButton(
-                            onClick = { onSeekToSeconds((mediaState.currentSeconds + 10).coerceAtMost(mediaState.totalSeconds)) },
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Icon(Icons.Default.Forward10, contentDescription = "+10s", tint = VaultPureWhite)
+                        IconButton(onClick = onSkipNext) {
+                            Icon(Icons.Default.SkipNext, contentDescription = "Selanjutnya", tint = CosmicTextPure)
                         }
 
-                        IconButton(
-                            onClick = onSkipNext,
-                            modifier = Modifier
-                                .size(34.dp)
-                                .testTag("player_next_button")
-                        ) {
-                            Icon(Icons.Default.SkipNext, contentDescription = "Berikutnya", tint = VaultPureWhite)
+                        // Repeat Mode Toggle
+                        IconButton(onClick = onToggleRepeat) {
+                            Icon(
+                                imageVector = when (mediaState.repeatMode) {
+                                    PlaybackRepeatMode.REPEAT_ONE -> Icons.Default.RepeatOne
+                                    PlaybackRepeatMode.AUTO_ADVANCE -> Icons.Default.SkipNext
+                                    PlaybackRepeatMode.REPEAT_PLAYLIST -> Icons.Default.Repeat
+                                },
+                                contentDescription = "Mode Ulang",
+                                tint = if (mediaState.repeatMode != PlaybackRepeatMode.AUTO_ADVANCE) PastelSky else CosmicTextPure.copy(alpha = 0.6f)
+                            )
                         }
-                    }
 
-                    Text(
-                        text = "${formatSeconds(mediaState.currentSeconds)} / ${formatSeconds(mediaState.totalSeconds)}",
-                        fontFamily = JetBrainsMonoFontFamily,
-                        fontSize = 11.sp,
-                        color = VaultPureWhite,
-                        modifier = Modifier.testTag("player_time_readout")
-                    )
-                }
+                        // Speed Cycle Button
+                        Surface(
+                            color = Color(0x44FFFFFF),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.clickable(onClick = onCycleSpeed)
+                        ) {
+                            Text(
+                                text = "${mediaState.playbackSpeed}x",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = CosmicTextPure,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                            )
+                        }
 
-                Slider(
-                    value = mediaState.currentSeconds.toFloat(),
-                    onValueChange = { onSeekToSeconds(it.toInt()) },
-                    valueRange = 0f..mediaState.totalSeconds.coerceAtLeast(1).toFloat(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(20.dp),
-                    colors = SliderDefaults.colors(
-                        thumbColor = VaultCoral,
-                        activeTrackColor = VaultCoral,
-                        inactiveTrackColor = VaultPureWhite.copy(alpha = 0.3f)
-                    )
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActiveTrackMetadataCard(
-    track: VaultItemEntity,
-    activeVaultId: Int,
-    onRequestPinToggleEncrypt: () -> Unit,
-    onRequestShareWithBiometric: () -> Unit,
-    onRequestExportWithBiometric: () -> Unit,
-    onOpenFullscreen: () -> Unit,
-    onImportMoreClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = VaultPureWhite),
-        border = androidx.compose.foundation.BorderStroke(1.dp, VaultObsidian.copy(alpha = 0.08f))
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
-        ) {
-            Text(
-                text = "${track.name}.${track.extension}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = VaultObsidian,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = buildString {
-                    append("Brankas $activeVaultId • ${formatFileSize(track.sizeBytes)}")
-                    if (!track.groupArchiveName.isNullOrBlank()) {
-                        append(" • ZIP: ${track.groupArchiveName}")
-                    }
-                },
-                style = MaterialTheme.typography.labelMedium,
-                color = VaultTextMuted
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Clean Action Pills: Bagikan (Biometrik), Ekspor (Biometrik), Kunci/Dekripsi, Layar Penuh
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Share Individual File with Secondary Biometric Re-Auth
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(VaultObsidian)
-                        .instantTouchPress { onRequestShareWithBiometric() }
-                        .padding(horizontal = 13.dp, vertical = 8.dp)
-                        .testTag("player_share_biometric_button")
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Bagikan File",
-                            tint = VaultLime,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Text(
-                            text = "Bagikan (Sidik Jari)",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = VaultPureWhite
-                        )
-                    }
-                }
-
-                // Export Individual File to Device Storage with Secondary Biometric Re-Auth
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(VaultLime)
-                        .instantTouchPress { onRequestExportWithBiometric() }
-                        .padding(horizontal = 13.dp, vertical = 8.dp)
-                        .testTag("player_export_biometric_button")
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = "Ekspor File",
-                            tint = VaultObsidian,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Text(
-                            text = "Ekspor File (Sidik Jari)",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = VaultObsidian
-                        )
-                    }
-                }
-
-                // Toggle Encrypt/Decrypt with PIN
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(VaultMintCard)
-                        .instantTouchPress { onRequestPinToggleEncrypt() }
-                        .padding(horizontal = 13.dp, vertical = 8.dp)
-                        .testTag("player_toggle_encrypt_chip")
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (track.isEncrypted) Icons.Default.LockOpen else Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = VaultObsidian,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Text(
-                            text = if (track.isEncrypted) "Buka PIN" else "Kunci PIN",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = VaultObsidian
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(VaultCream)
-                        .border(1.dp, VaultObsidian.copy(alpha = 0.16f), RoundedCornerShape(50))
-                        .instantTouchPress { onOpenFullscreen() }
-                        .padding(horizontal = 13.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Fullscreen,
-                            contentDescription = null,
-                            tint = VaultObsidian,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Text(
-                            text = "Layar Penuh",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = VaultObsidian
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(VaultCream)
-                        .border(1.dp, VaultObsidian.copy(alpha = 0.16f), RoundedCornerShape(50))
-                        .instantTouchPress { onImportMoreClick() }
-                        .padding(horizontal = 13.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.UploadFile,
-                            contentDescription = null,
-                            tint = VaultObsidian,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Text(
-                            text = "+ Impor",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = VaultObsidian
-                        )
+                        IconButton(onClick = onOpenFullscreen) {
+                            Icon(Icons.Default.Fullscreen, contentDescription = "Fullscreen", tint = CosmicTextPure)
+                        }
                     }
                 }
             }
@@ -959,204 +966,416 @@ private fun ActiveTrackMetadataCard(
 }
 
 @Composable
-private fun YouTubeUpNextVideoRow(
+private fun ScopedVideoItemRow(
     index: Int,
     item: VaultItemEntity,
     isSelected: Boolean,
     isPlaying: Boolean,
-    isSameZipSibling: Boolean,
     onClickPlay: () -> Unit,
-    onClickPinLockToggle: () -> Unit,
-    onClickShareWithBiometric: () -> Unit,
-    onClickExportWithBiometric: () -> Unit
+    onMoveClick: () -> Unit,
+    onClickPinToggle: () -> Unit,
+    onClickShare: () -> Unit
 ) {
-    val cat = VaultCategory.entries.find { it.name == item.category } ?: VaultCategory.VIDEO
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .fastZeroLatencyClick { onClickPlay() }
-            .testTag("media_queue_item_${item.id}"),
-        shape = RoundedCornerShape(16.dp),
+            .clickable(onClick = onClickPlay),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) VaultObsidian else VaultPureWhite
+            containerColor = if (isSelected) CosmicSurface else CosmicObsidian
         ),
-        border = if (!isSelected) {
-            androidx.compose.foundation.BorderStroke(
-                width = if (isSameZipSibling) 1.2.dp else 1.dp,
-                color = if (isSameZipSibling) VaultMintAccent.copy(alpha = 0.4f) else VaultObsidian.copy(alpha = 0.08f)
-            )
-        } else null
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (isSelected) PastelSky.copy(alpha = 0.8f) else CosmicBorderHairline
+        )
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Compact Thumbnail Box
-            Box(
-                modifier = Modifier
-                    .width(96.dp)
-                    .height(56.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isSelected) VaultCharcoal else Color(0xFF1A2228)),
-                contentAlignment = Alignment.Center
+            // Index & Video Thumbnail/Icon
+            Surface(
+                color = if (isSelected) PastelSky.copy(alpha = 0.2f) else CosmicVoid,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.size(46.dp)
             ) {
-                Icon(
-                    imageVector = when {
-                        isPlaying -> Icons.Default.Equalizer
-                        cat == VaultCategory.VIDEO -> Icons.Default.VideoFile
-                        cat == VaultCategory.IMAGE -> Icons.Default.Image
-                        else -> Icons.Default.AudioFile
-                    },
-                    contentDescription = null,
-                    tint = if (isSelected) VaultLime else VaultMintCard,
-                    modifier = Modifier.size(24.dp)
-                )
-
-                Surface(
-                    color = VaultObsidian.copy(alpha = 0.78f),
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(3.dp)
-                ) {
-                    Text(
-                        text = "#$index",
-                        fontFamily = JetBrainsMonoFontFamily,
-                        fontSize = 9.sp,
-                        color = VaultLime,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                    )
-                }
-
-                Surface(
-                    color = VaultObsidian.copy(alpha = 0.85f),
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(3.dp)
-                ) {
-                    Text(
-                        text = if (item.durationSeconds > 0) {
-                            formatSeconds(item.durationSeconds)
-                        } else {
-                            item.extension.uppercase()
-                        },
-                        fontFamily = JetBrainsMonoFontFamily,
-                        fontSize = 9.sp,
-                        color = VaultPureWhite,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                    )
+                Box(contentAlignment = Alignment.Center) {
+                    if (isPlaying) {
+                        Icon(Icons.Default.Equalizer, contentDescription = null, tint = PastelSky, modifier = Modifier.size(24.dp))
+                    } else {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = if (isSelected) PastelSky else CosmicTextMuted)
+                    }
                 }
             }
 
-            // Title & Info
+            // Video Meta
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "${item.name}.${item.extension}",
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (isSelected) VaultPureWhite else VaultObsidian,
+                    color = if (isSelected) PastelSky else CosmicTextPure,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.SemiBold
                 )
-
-                if (!item.groupArchiveName.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (!item.groupArchiveName.isNullOrBlank()) {
+                        Surface(
+                            color = PastelPeach.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = item.groupArchiveName!!,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = PastelPeach,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                     Text(
-                        text = "ZIP: ${item.groupArchiveName}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (isSelected) VaultLime else VaultMintAccent,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = "${item.sizeBytes / 1024} KB • ${formatSec(item.durationSeconds)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CosmicTextMuted
                     )
                 }
-
-                Text(
-                    text = "${formatFileSize(item.sizeBytes)} • ${if (item.isEncrypted) "Terkunci" else "Terbuka"}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (isSelected) VaultPureWhite.copy(alpha = 0.65f) else VaultTextMuted
-                )
             }
 
-            // Share / Export Biometric Quick Actions + Play/Unlock Pill
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(if (isSelected) VaultCharcoal else VaultCream)
-                        .instantTouchPress { onClickShareWithBiometric() }
-                        .testTag("playlist_share_item_${item.id}"),
-                    contentAlignment = Alignment.Center
-                ) {
+            // Actions: Move to Playlist, PIN Lock Toggle, Biometric Share
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                IconButton(onClick = onMoveClick, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.DriveFileMove, contentDescription = "Pindahkan ke Playlist", tint = PastelPeach, modifier = Modifier.size(18.dp))
+                }
+                IconButton(onClick = onClickPinToggle, modifier = Modifier.size(36.dp)) {
                     Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Bagikan dengan Sidik Jari",
-                        tint = if (isSelected) VaultLime else VaultObsidian,
-                        modifier = Modifier.size(16.dp)
+                        imageVector = if (item.isEncrypted) Icons.Default.Lock else Icons.Default.LockOpen,
+                        contentDescription = "Lock/Unlock",
+                        tint = if (item.isEncrypted) PastelRose else PastelMint,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
-
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(if (isSelected) VaultCharcoal else VaultMintCard)
-                        .instantTouchPress { onClickExportWithBiometric() }
-                        .testTag("playlist_export_item_${item.id}"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = "Ekspor dengan Sidik Jari",
-                        tint = if (isSelected) VaultLime else VaultObsidian,
-                        modifier = Modifier.size(16.dp)
-                    )
+                IconButton(onClick = onClickShare, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.Share, contentDescription = "Bagikan", tint = CosmicTextMuted, modifier = Modifier.size(18.dp))
                 }
+            }
+        }
+    }
+}
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(
-                            when {
-                                item.isEncrypted -> VaultCoral
-                                isSelected -> VaultLime
-                                else -> VaultObsidian
-                            }
-                        )
-                        .instantTouchPress {
-                            if (item.isEncrypted) onClickPinLockToggle() else onClickPlay()
-                        }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+/**
+ * Sub-Tab 1: Dedicated Audio & Music Stream View with Waveform Visualizer.
+ */
+@Composable
+private fun MusicStreamAndAudioPlaylistView(
+    activeVaultId: Int,
+    audioItems: List<VaultItemEntity>,
+    mediaState: MediaPlayerUiState,
+    onTogglePlayPause: () -> Unit,
+    onSeekToSeconds: (Int) -> Unit,
+    onSkipTrack: (Boolean) -> Unit,
+    onSelectOrOpenMedia: (VaultItemEntity) -> Unit,
+    onRequestPinToggleEncrypt: (VaultItemEntity) -> Unit,
+    onRequestExportOrShareWithBiometric: (VaultItemEntity, Boolean) -> Unit,
+    onToggleRepeat: () -> Unit,
+    onImportAudioClick: () -> Unit
+) {
+    val currentAudio = mediaState.currentTrack?.takeIf { it.category == VaultCategory.AUDIO.name }
+        ?: audioItems.firstOrNull()
+
+    if (audioItems.isEmpty()) {
+        EmptyMediaCategoryState(
+            title = "Belum Ada Musik di Brankas $activeVaultId",
+            subtitle = "Impor audio (MP3/WAV/M4A) atau unduh lagu audio via Mori.",
+            buttonText = "Impor Lagu ke Brankas",
+            onClickImport = onImportAudioClick
+        )
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 100.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // Dedicated Audio Stage Card
+        if (currentAudio != null) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(26.dp),
+                    colors = CardDefaults.cardColors(containerColor = CosmicObsidian),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, PastelLavender.copy(alpha = 0.4f))
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(
-                            imageVector = when {
-                                item.isEncrypted -> Icons.Default.LockOpen
-                                isPlaying -> Icons.Default.Pause
-                                else -> Icons.Default.PlayArrow
-                            },
-                            contentDescription = null,
-                            tint = if (item.isEncrypted) VaultPureWhite else if (isSelected) VaultObsidian else VaultLime,
-                            modifier = Modifier.size(14.dp)
+                        // Music Vinyl / Album Art with Lavender Aura
+                        Surface(
+                            color = CosmicSurface,
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier
+                                .size(140.dp)
+                                .border(2.dp, PastelLavender.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    tint = PastelLavender,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Text(
+                            text = "${currentAudio.name}.${currentAudio.extension}",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = CosmicTextPure,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Format: ${currentAudio.extension.uppercase()} • Brankas $activeVaultId",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PastelLavender
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Waveform Animated Visualizer
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                        ) {
+                            val w = size.width
+                            val h = size.height
+                            val barCount = 32
+                            val barW = (w / barCount) * 0.7f
+                            for (i in 0 until barCount) {
+                                val wave = if (mediaState.isPlaying) {
+                                    0.25f + 0.70f * kotlin.math.abs(sin(i * 0.45f + mediaState.currentSeconds))
+                                } else {
+                                    0.25f
+                                }
+                                val barH = h * wave
+                                drawRoundRect(
+                                    color = if (i % 2 == 0) PastelLavender else PastelSky,
+                                    topLeft = Offset(i * (w / barCount), h - barH),
+                                    size = androidx.compose.ui.geometry.Size(barW, barH),
+                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Audio Seek Slider
+                        Slider(
+                            value = mediaState.currentSeconds.toFloat(),
+                            onValueChange = { onSeekToSeconds(it.toInt()) },
+                            valueRange = 0f..mediaState.totalSeconds.toFloat().coerceAtLeast(1f),
+                            colors = SliderDefaults.colors(
+                                thumbColor = PastelLavender,
+                                activeTrackColor = PastelLavender,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                            )
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(formatSec(mediaState.currentSeconds), color = CosmicTextMuted, style = MaterialTheme.typography.labelSmall)
+                            Text(formatSec(mediaState.totalSeconds), color = CosmicTextMuted, style = MaterialTheme.typography.labelSmall)
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Playback Controls
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = onToggleRepeat) {
+                                Icon(Icons.Default.Repeat, contentDescription = null, tint = if (mediaState.isRepeatEnabled) PastelLavender else CosmicTextMuted)
+                            }
+                            IconButton(onClick = { onSkipTrack(false) }, modifier = Modifier.size(44.dp)) {
+                                Icon(Icons.Default.SkipPrevious, contentDescription = null, tint = CosmicTextPure, modifier = Modifier.size(28.dp))
+                            }
+                            Button(
+                                onClick = onTogglePlayPause,
+                                shape = CircleShape,
+                                colors = ButtonDefaults.buttonColors(containerColor = PastelLavender, contentColor = CosmicVoid),
+                                modifier = Modifier.size(54.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (mediaState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            IconButton(onClick = { onSkipTrack(true) }, modifier = Modifier.size(44.dp)) {
+                                Icon(Icons.Default.SkipNext, contentDescription = null, tint = CosmicTextPure, modifier = Modifier.size(28.dp))
+                            }
+                            IconButton(onClick = { onRequestPinToggleEncrypt(currentAudio) }) {
+                                Icon(
+                                    imageVector = if (currentAudio.isEncrypted) Icons.Default.Lock else Icons.Default.LockOpen,
+                                    contentDescription = null,
+                                    tint = if (currentAudio.isEncrypted) PastelRose else PastelMint
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Text("Daftar Lagu di Brankas $activeVaultId (${audioItems.size})", style = MaterialTheme.typography.titleMedium, color = CosmicTextPure, fontWeight = FontWeight.Bold)
+        }
+
+        itemsIndexed(audioItems, key = { _, item -> item.id }) { index, item ->
+            val isPlayingNow = currentAudio?.id == item.id
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelectOrOpenMedia(item) },
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = if (isPlayingNow) CosmicSurface else CosmicObsidian),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (isPlayingNow) PastelLavender else CosmicBorderHairline)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        color = if (isPlayingNow) PastelLavender.copy(alpha = 0.2f) else CosmicVoid,
+                        shape = CircleShape,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (isPlayingNow && mediaState.isPlaying) Icons.Default.Equalizer else Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = if (isPlayingNow) PastelLavender else CosmicTextMuted
+                            )
+                        }
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "${item.name}.${item.extension}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (isPlayingNow) PastelLavender else CosmicTextPure,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = when {
-                                item.isEncrypted -> "PIN"
-                                isPlaying -> "Aktif"
-                                else -> "Putar"
-                            },
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = if (item.isEncrypted) VaultPureWhite else if (isSelected) VaultObsidian else VaultPureWhite
+                            text = "${item.sizeBytes / 1024} KB • ${formatSec(item.durationSeconds)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CosmicTextMuted
+                        )
+                    }
+
+                    IconButton(onClick = { onRequestExportOrShareWithBiometric(item, true) }) {
+                        Icon(Icons.Default.Share, contentDescription = null, tint = CosmicTextMuted, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Sub-Tab 2: Dedicated Photo & Sticker Squircle Gallery Grid.
+ * Isolated strictly to active vault.
+ */
+@Composable
+private fun PhotoGallerySquircleView(
+    activeVaultId: Int,
+    photoItems: List<VaultItemEntity>,
+    onSelectOrOpenPhoto: (VaultItemEntity) -> Unit,
+    onRequestPinToggleEncrypt: (VaultItemEntity) -> Unit,
+    onRequestExportOrShareWithBiometric: (VaultItemEntity, Boolean) -> Unit,
+    onImportPhotoClick: () -> Unit
+) {
+    if (photoItems.isEmpty()) {
+        EmptyMediaCategoryState(
+            title = "Belum Ada Foto di Brankas $activeVaultId",
+            subtitle = "Impor foto, stiker, atau unduh gambar dari Mori untuk disimpan terenkripsi.",
+            buttonText = "Impor Foto ke Brankas",
+            onClickImport = onImportPhotoClick
+        )
+        return
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 100.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        items(photoItems, key = { it.id }) { item ->
+            val plainFile = remember(item.internalPlainPath) { File(item.internalPlainPath) }
+
+            Surface(
+                color = CosmicObsidian,
+                shape = RoundedCornerShape(20.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (item.isEncrypted) PastelRose.copy(alpha = 0.5f) else CosmicBorderHairline),
+                modifier = Modifier
+                    .aspectRatio(1f)
+                    .clickable { onSelectOrOpenPhoto(item) }
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (item.isEncrypted) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(6.dp)
+                        ) {
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = PastelRose, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = item.extension.uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = PastelRose,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else if (plainFile.exists()) {
+                        Image(
+                            painter = rememberAsyncImagePainter(model = plainFile),
+                            contentDescription = item.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(Icons.Default.Image, contentDescription = null, tint = PastelPeach, modifier = Modifier.size(32.dp))
+                    }
+
+                    // Bottom subtle title badge
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .background(Color(0xBB0A0F1D))
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = item.name,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CosmicTextPure,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -1165,9 +1384,53 @@ private fun YouTubeUpNextVideoRow(
     }
 }
 
-fun formatSeconds(seconds: Int): String {
-    val safe = seconds.coerceAtLeast(0)
-    val mins = safe / 60
-    val secs = safe % 60
-    return "%02d:%02d".format(mins, secs)
+@Composable
+private fun EmptyMediaCategoryState(
+    title: String,
+    subtitle: String,
+    buttonText: String,
+    onClickImport: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        CosmicDragonAvatar(mood = MascotMood.IDLE_BREATHE, size = 96.dp)
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium,
+            color = CosmicTextPure,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodyMedium,
+            color = CosmicTextMuted,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(18.dp))
+        Button(
+            onClick = onClickImport,
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PastelSky, contentColor = CosmicVoid)
+        ) {
+            Icon(Icons.Default.UploadFile, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(buttonText, fontWeight = FontWeight.Bold)
+        }
+    }
 }
+
+fun formatSeconds(totalSec: Int): String {
+    val m = totalSec / 60
+    val s = totalSec % 60
+    return String.format("%02d:%02d", m, s)
+}
+
+fun formatSec(totalSec: Int): String = formatSeconds(totalSec)

@@ -188,7 +188,7 @@ fun MoriDownloaderScreen(
                         }
                     }
                     Text(
-                        text = "Client-Side Downloader Tanpa Watermark -> Brankas $activeVaultId",
+                        text = "Client-Side Downloader Tanpa Watermark -> Ruang Rahasia",
                         style = MaterialTheme.typography.labelMedium,
                         color = VaultTextMuted
                     )
@@ -705,9 +705,9 @@ fun MoriDownloaderScreen(
                                 )
                                 Text(
                                     text = if (moriState.encryptImmediately) {
-                                        "Langsung disegel ChaCha20+AES-GCM di Brankas $activeVaultId"
+                                        "Langsung disegel ChaCha20+AES-GCM di Ruang Rahasia"
                                     } else {
-                                        "Simpan terbuka di Brankas $activeVaultId agar langsung siap diputar/dibuka"
+                                        "Simpan terbuka di Ruang Rahasia agar langsung siap diputar/dibuka"
                                     },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = VaultObsidian.copy(alpha = 0.75f)
@@ -744,9 +744,9 @@ fun MoriDownloaderScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (moriState.isDownloading) {
-                                "Mengekstrak & Menyimpan ke Brankas $activeVaultId..."
+                                "Mengekstrak & Menyimpan ke Ruang Rahasia..."
                             } else {
-                                "Unduh & Simpan ke Brankas $activeVaultId"
+                                "Unduh & Simpan ke Ruang Rahasia"
                             },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
@@ -858,7 +858,7 @@ fun MoriDownloaderScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Hasil Unduhan Mori di Brankas $activeVaultId (${moriSavedItems.size})",
+                        text = "Hasil Unduhan Mori (${moriSavedItems.size})",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = VaultObsidian

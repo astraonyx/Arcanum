@@ -10,9 +10,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -159,6 +161,7 @@ fun triggerHardwareBiometricIfAvailable(
 fun SecurityGateScreen(
     securityState: SecurityGateUiState,
     onDigitClick: (Int) -> Unit,
+    onCharClick: (Char) -> Unit = { c -> onDigitClick(c.digitToIntOrNull() ?: 0) },
     onBackspaceClick: () -> Unit,
     onClearClick: () -> Unit,
     onBiometricSuccess: () -> Unit,
@@ -316,9 +319,9 @@ fun SecurityGateScreen(
                     stage = securityState.stage,
                     enteredPin = securityState.enteredPin,
                     errorMessage = securityState.errorMessage,
-                    onDigitClick = { digit ->
+                    onCharClick = { char ->
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onDigitClick(digit)
+                        onCharClick(char)
                     },
                     onBackspaceClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -384,10 +387,12 @@ private fun PinEntryGateCard(
     stage: AuthStage,
     enteredPin: String,
     errorMessage: String?,
-    onDigitClick: (Int) -> Unit,
+    onCharClick: (Char) -> Unit,
     onBackspaceClick: () -> Unit,
     onClearClick: () -> Unit
 ) {
+    var isAlphaMode by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -416,9 +421,9 @@ private fun PinEntryGateCard(
 
                 Text(
                     text = if (stage.layerNumber > 1) {
-                        "Masukkan 6 digit PIN Lapis ${stage.layerNumber}"
+                        "Masukkan 6 karakter PIN Lapis ${stage.layerNumber} (A-Z, 0-9)"
                     } else {
-                        "Masukkan 6 digit PIN untuk membuka brankas"
+                        "Masukkan 6 karakter PIN untuk membuka brankas"
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = VaultPureWhite.copy(alpha = 0.68f),
@@ -427,7 +432,7 @@ private fun PinEntryGateCard(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 6-Digit Minimalist PIN Slots
+                // 6-Character Minimalist PIN Slots
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -456,11 +461,11 @@ private fun PinEntryGateCard(
                             contentAlignment = Alignment.Center
                         ) {
                             if (isFilled) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(12.dp)
-                                        .clip(CircleShape)
-                                        .background(VaultObsidian)
+                                Text(
+                                    text = enteredPin[i].toString(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = VaultObsidian,
+                                    fontWeight = FontWeight.Bold
                                 )
                             } else {
                                 Text(
@@ -493,80 +498,225 @@ private fun PinEntryGateCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // Clean Minimalist 0ms Keypad
-        Column(
+        // Alphanumeric Mode Switcher (123 Angka <-> ABC Huruf)
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.Center
         ) {
-            val rows = listOf(
-                listOf(1, 2, 3),
-                listOf(4, 5, 6),
-                listOf(7, 8, 9)
-            )
-            rows.forEach { rowDigits ->
+            Surface(
+                color = if (!isAlphaMode) VaultLime else VaultCharcoal,
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (!isAlphaMode) VaultLime else VaultSlate),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { isAlphaMode = false }
+            ) {
+                Text(
+                    text = "1 2 3 Angka",
+                    color = if (!isAlphaMode) VaultObsidian else VaultPureWhite,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Surface(
+                color = if (isAlphaMode) VaultLime else VaultCharcoal,
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (isAlphaMode) VaultLime else VaultSlate),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { isAlphaMode = true }
+            ) {
+                Text(
+                    text = "A B C Huruf (A-Z)",
+                    color = if (isAlphaMode) VaultObsidian else VaultPureWhite,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Clean Minimalist 0ms Keypad (Digits or Alphanumeric)
+        if (!isAlphaMode) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                val rows = listOf(
+                    listOf('1', '2', '3'),
+                    listOf('4', '5', '6'),
+                    listOf('7', '8', '9')
+                )
+                rows.forEach { rowChars ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        rowChars.forEach { ch ->
+                            FastPinKeypadButton(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("pin_key_$ch"),
+                                label = ch.toString(),
+                                onClick = { onCharClick(ch) }
+                            )
+                        }
+                    }
+                }
+
+                // Bottom row: Clear, 0, Backspace
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    rowDigits.forEach { digit ->
-                        FastPinKeypadButton(
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("pin_key_$digit"),
-                            label = digit.toString(),
-                            onClick = { onDigitClick(digit) }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(58.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(VaultCharcoal)
+                            .instantTouchPress { onClearClick() }
+                            .testTag("pin_key_clear"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "ULANG",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = VaultAmber
+                        )
+                    }
+
+                    FastPinKeypadButton(
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("pin_key_0"),
+                        label = "0",
+                        onClick = { onCharClick('0') }
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(58.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(VaultCharcoal)
+                            .instantTouchPress { onBackspaceClick() }
+                            .testTag("pin_key_backspace"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Backspace,
+                            contentDescription = "Backspace",
+                            tint = VaultPureWhite
                         )
                     }
                 }
             }
-
-            // Bottom row: Clear, 0, Backspace
-            Row(
+        } else {
+            // Alphanumeric Keyboard (A to Z)
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(58.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(VaultCharcoal)
-                        .instantTouchPress { onClearClick() }
-                        .testTag("pin_key_clear"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "ULANG",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = VaultAmber
-                    )
+                val letterRows = listOf(
+                    listOf('A', 'B', 'C', 'D', 'E', 'F', 'G'),
+                    listOf('H', 'I', 'J', 'K', 'L', 'M', 'N'),
+                    listOf('O', 'P', 'Q', 'R', 'S', 'T', 'U')
+                )
+                letterRows.forEach { rowLetters ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        rowLetters.forEach { ch ->
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(46.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(VaultCharcoal)
+                                    .border(1.dp, VaultSlate.copy(alpha = 0.65f), RoundedCornerShape(12.dp))
+                                    .instantTouchPress { onCharClick(ch) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = ch.toString(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = VaultPureWhite,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
 
-                FastPinKeypadButton(
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("pin_key_0"),
-                    label = "0",
-                    onClick = { onDigitClick(0) }
-                )
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(58.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(VaultCharcoal)
-                        .instantTouchPress { onBackspaceClick() }
-                        .testTag("pin_key_backspace"),
-                    contentAlignment = Alignment.Center
+                // Row 4: V W X Y Z + Clear + Backspace
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Backspace,
-                        contentDescription = "Backspace",
-                        tint = VaultPureWhite
-                    )
+                    val lastLetters = listOf('V', 'W', 'X', 'Y', 'Z')
+                    lastLetters.forEach { ch ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(VaultCharcoal)
+                                .border(1.dp, VaultSlate.copy(alpha = 0.65f), RoundedCornerShape(12.dp))
+                                .instantTouchPress { onCharClick(ch) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = ch.toString(),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = VaultPureWhite,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1.1f)
+                            .height(46.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(VaultCharcoal)
+                            .border(1.dp, VaultAmber.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                            .instantTouchPress { onClearClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "CLR",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = VaultAmber,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1.1f)
+                            .height(46.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(VaultCharcoal)
+                            .border(1.dp, VaultSlate.copy(alpha = 0.65f), RoundedCornerShape(12.dp))
+                            .instantTouchPress { onBackspaceClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Backspace,
+                            contentDescription = "Backspace",
+                            tint = VaultPureWhite,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }
@@ -1028,6 +1178,7 @@ fun ForgotPinRecoveryDialog(
     onResetPinsAndUnlock: (vaultId: Int, p1: String, p2: String, p3: String, unlockNow: Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var isIdentityVerified by remember { mutableStateOf(false) }
     var answerInput by remember { mutableStateOf("") }
     var verificationError by remember { mutableStateOf<String?>(null) }
@@ -1164,13 +1315,25 @@ fun ForgotPinRecoveryDialog(
                     Button(
                         onClick = {
                             val expected = securityConfig.recoveryAnswer.trim()
-                            if (answerInput.trim().equals(expected, ignoreCase = true) ||
-                                answerInput.trim().equals("nyxvault", ignoreCase = true)
-                            ) {
+                            if (expected.isNotBlank() && answerInput.trim().equals(expected, ignoreCase = true)) {
                                 verificationError = null
-                                isIdentityVerified = true
+                                val triggered = triggerHardwareBiometricIfAvailable(
+                                    context = context,
+                                    title = "Otorisasi Kredensial Perangkat Pemulihan",
+                                    subtitle = "Pindai sidik jari atau masukkan PIN perangkat Anda untuk menyelesaikan pemulihan",
+                                    onSuccess = {
+                                        verificationError = null
+                                        isIdentityVerified = true
+                                    },
+                                    onErrorFeedback = { msg ->
+                                        verificationError = "Otorisasi perangkat gagal: $msg"
+                                    }
+                                )
+                                if (!triggered) {
+                                    isIdentityVerified = true
+                                }
                             } else {
-                                verificationError = "Jawaban pemulihan tidak cocok. Coba lagi atau gunakan sensor sidik jari di bawah."
+                                verificationError = "Jawaban pertanyaan pemulihan tidak sesuai. Akses pemulihan ditolak."
                             }
                         },
                         modifier = Modifier
@@ -1183,26 +1346,8 @@ fun ForgotPinRecoveryDialog(
                             contentColor = VaultObsidian
                         )
                     ) {
-                        Text("Verifikasi Jawaban Pemulihan", fontWeight = FontWeight.Bold)
+                        Text("Verifikasi Jawaban & Sidik Jari OS", fontWeight = FontWeight.Bold)
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = "ATAU PINDAI SIDIK JARI PEMILIK (TAHAN 100%):",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = VaultMintCard
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    InteractiveFingerprintScannerPad(
-                        onScanCompleted = {
-                            verificationError = null
-                            isIdentityVerified = true
-                        },
-                        onPartialReleaseWarning = { msg -> verificationError = msg }
-                    )
 
                     if (verificationError != null) {
                         Spacer(modifier = Modifier.height(10.dp))
@@ -1214,7 +1359,7 @@ fun ForgotPinRecoveryDialog(
                         )
                     }
                 } else {
-                    // STEP 2: Identity Verified -> View / Reset 3-Layer PINs for Vault 1 or Vault 2
+                    // STEP 2: Identity Verified -> View / Reset 3-Layer Alphanumeric PINs for any configured Vault
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = null,
@@ -1230,7 +1375,7 @@ fun ForgotPinRecoveryDialog(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Pilih brankas yang ingin Anda lihat atau ubah PIN 3-lapisnya:",
+                        text = "Pilih brankas yang ingin Anda ubah PIN 3-lapisnya (Mendukung Huruf A-Z dan Angka):",
                         style = MaterialTheme.typography.bodyMedium,
                         color = VaultPureWhite.copy(alpha = 0.72f),
                         textAlign = TextAlign.Center
@@ -1238,62 +1383,62 @@ fun ForgotPinRecoveryDialog(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Multi-Vault Selection Row (1 to vaultCount)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(42.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (selectedVaultId == 1) VaultLime else VaultCharcoal)
-                                .instantTouchPress { selectedVaultId = 1 },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Brankas 1 (Utama)",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = if (selectedVaultId == 1) VaultObsidian else VaultPureWhite,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(42.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (selectedVaultId == 2) VaultCoral else VaultCharcoal)
-                                .instantTouchPress { selectedVaultId = 2 },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Brankas 2 (Kedua)",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = VaultPureWhite,
-                                fontWeight = FontWeight.Bold
-                            )
+                        val maxV = securityConfig.vaultCount.coerceIn(1, 10)
+                        for (v in 1..maxV) {
+                            val isSel = selectedVaultId == v
+                            Box(
+                                modifier = Modifier
+                                    .height(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSel) VaultLime else VaultCharcoal)
+                                    .instantTouchPress { selectedVaultId = v }
+                                    .padding(horizontal = 14.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Brankas $v",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = if (isSel) VaultObsidian else VaultPureWhite,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     RecoveryPinInputField(
-                        label = "PIN Lapis 1 Baru (6 Digit)",
+                        label = "PIN Lapis 1 Baru (Alfanumerik 6 Karakter)",
                         value = newPin1,
-                        onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) newPin1 = it }
+                        onValueChange = {
+                            val clean = it.uppercase().filter { ch -> ch.isDigit() || ch in 'A'..'Z' }.take(6)
+                            newPin1 = clean
+                        }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     RecoveryPinInputField(
-                        label = "PIN Lapis 2 Baru (6 Digit)",
+                        label = "PIN Lapis 2 Baru (Alfanumerik 6 Karakter)",
                         value = newPin2,
-                        onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) newPin2 = it }
+                        onValueChange = {
+                            val clean = it.uppercase().filter { ch -> ch.isDigit() || ch in 'A'..'Z' }.take(6)
+                            newPin2 = clean
+                        }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     RecoveryPinInputField(
-                        label = "PIN Lapis 3 Baru (6 Digit)",
+                        label = "PIN Lapis 3 Baru (Alfanumerik 6 Karakter)",
                         value = newPin3,
-                        onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) newPin3 = it }
+                        onValueChange = {
+                            val clean = it.uppercase().filter { ch -> ch.isDigit() || ch in 'A'..'Z' }.take(6)
+                            newPin3 = clean
+                        }
                     )
 
                     if (verificationError != null) {
@@ -1312,7 +1457,7 @@ fun ForgotPinRecoveryDialog(
                             if (newPin1.length == 6 && newPin2.length == 6 && newPin3.length == 6) {
                                 onResetPinsAndUnlock(selectedVaultId, newPin1, newPin2, newPin3, true)
                             } else {
-                                verificationError = "Ketiga PIN wajib diisi tepat 6 digit angka!"
+                                verificationError = "Ketiga PIN wajib diisi tepat 6 karakter alfanumerik (A-Z, 0-9)!"
                             }
                         },
                         modifier = Modifier

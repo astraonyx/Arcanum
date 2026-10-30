@@ -3,6 +3,7 @@ package com.example.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,12 +18,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Key
@@ -30,7 +37,9 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -50,6 +59,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +75,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import java.io.File
+import kotlinx.coroutines.delay
 import com.example.data.EncryptionPreset
 import com.example.data.EncryptionScriptEngine
 import com.example.data.SecurityConfig
@@ -89,9 +101,14 @@ fun EncryptionScriptEngineScreen(
     securityConfig: SecurityConfig,
     onSaveScriptConfig: (EncryptionPreset, String) -> Unit,
     onSaveVaultPins: (vaultId: Int, String, String, String) -> Unit,
+    onAddNewVault: (String, String, String) -> Unit = { _, _, _ -> },
     onSaveRecoveryCredentials: (String, String) -> Unit = { _, _ -> },
     onToggleBiometricGate: (Boolean) -> Unit,
-    onLockVaultNow: () -> Unit
+    onLockVaultNow: () -> Unit,
+    onLinkGoogleAccount: (String) -> Unit = {},
+    onUnlinkGoogleAccount: () -> Unit = {},
+    onBackupToCloud: () -> Unit = {},
+    onRestoreFromCloud: (File) -> Unit = {}
 ) {
     val activePresetInit = EncryptionPreset.entries.find { it.id == securityConfig.activeScriptName }
         ?: EncryptionPreset.NYX2_DUAL_CIPHER
@@ -111,6 +128,17 @@ fun EncryptionScriptEngineScreen(
     var pin2Input by remember(editingVaultTab, currentP2) { mutableStateOf(currentP2) }
     var pin3Input by remember(editingVaultTab, currentP3) { mutableStateOf(currentP3) }
     var pinValidationError by remember { mutableStateOf<String?>(null) }
+
+    var showVaultIdentityBanner by remember { mutableStateOf(false) }
+    var showCreateVaultDialog by remember { mutableStateOf(false) }
+    var showGoogleAccountDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showVaultIdentityBanner) {
+        if (showVaultIdentityBanner) {
+            delay(5000)
+            showVaultIdentityBanner = false
+        }
+    }
 
     var recoveryQuestionInput by remember(securityConfig.recoveryQuestion) {
         mutableStateOf(securityConfig.recoveryQuestion)
@@ -280,7 +308,7 @@ fun EncryptionScriptEngineScreen(
             }
         }
 
-        // 3. Dual Vault PIN Configuration Card (Brankas 1: 111111,222222,333333 | Brankas 2: 444444,555555,666666)
+        // 3. Multi-Vault PIN Configuration & Stealth Vault Finder Card (Maks 10 Brankas)
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -292,6 +320,66 @@ fun EncryptionScriptEngineScreen(
                         .fillMaxWidth()
                         .padding(18.dp)
                 ) {
+                    // Fitur: Cari Tahu Ini Brankas Ke Berapa
+                    Button(
+                        onClick = { showVaultIdentityBanner = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("reveal_vault_identity_button"),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = VaultObsidian,
+                            contentColor = VaultLime
+                        )
+                    ) {
+                        Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Cari Tahu Ini Brankas Ke Berapa", style = MaterialTheme.typography.labelLarge)
+                    }
+
+                    if (showVaultIdentityBanner) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Surface(
+                            color = VaultObsidian,
+                            shape = RoundedCornerShape(16.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.5.dp, VaultLime),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "STATUS BRANKAS AKTIF",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = VaultLime
+                                    )
+                                    Text(
+                                        text = "Anda sedang berada di: Brankas $activeVaultId",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = VaultPureWhite
+                                    )
+                                    Text(
+                                        text = "Pesan ini otomatis hilang dalam 5 detik demi keamanan privasi.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = VaultPureWhite.copy(alpha = 0.7f)
+                                    )
+                                }
+                                IconButton(onClick = { showVaultIdentityBanner = false }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Tutup", tint = VaultPureWhite)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -302,79 +390,100 @@ fun EncryptionScriptEngineScreen(
                             tint = VaultObsidian
                         )
                         Text(
-                            text = "Dual-Mode PIN 3 Lapis (Brankas 1 & Brankas 2)",
+                            text = "Kelola Multi-Brankas (Maksimal 10)",
                             style = MaterialTheme.typography.titleLarge,
                             color = VaultObsidian
                         )
                     }
                     Text(
-                        text = "Masuk dengan PIN Brankas 1 membuka ruang utama, sedangkan PIN Brankas 2 membuka ruang rahasia kedua.",
+                        text = "Setiap brankas memiliki 3 lapis PIN alfanumerik (huruf A-Z dan angka 0-9) yang sepenuhnya terisolasi.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = VaultTextMuted
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Selector Tab: Brankas 1 vs Brankas 2
+                    // Dynamic Horizontal Scrollable Tabs: Brankas 1..N + Button Tambah Brankas
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(44.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(if (editingVaultTab == 1) VaultObsidian else VaultCream)
-                                .clickable { editingVaultTab = 1 }
-                                .testTag("config_select_vault1"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Brankas 1 (Utama)",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = if (editingVaultTab == 1) VaultLime else VaultObsidian
-                            )
+                        for (vId in 1..securityConfig.vaultCount.coerceIn(1, 10)) {
+                            val isSelected = editingVaultTab == vId
+                            Box(
+                                modifier = Modifier
+                                    .height(44.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(if (isSelected) VaultObsidian else VaultCream)
+                                    .clickable { editingVaultTab = vId }
+                                    .padding(horizontal = 14.dp)
+                                    .testTag("config_select_vault$vId"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Brankas $vId",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = if (isSelected) VaultLime else VaultObsidian,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            }
                         }
 
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(44.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(if (editingVaultTab == 2) VaultObsidian else VaultCream)
-                                .clickable { editingVaultTab = 2 }
-                                .testTag("config_select_vault2"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Brankas 2 (Kedua)",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = if (editingVaultTab == 2) VaultCoral else VaultObsidian
-                            )
+                        if (securityConfig.vaultCount < 10) {
+                            Box(
+                                modifier = Modifier
+                                    .height(44.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(VaultLime)
+                                    .clickable { showCreateVaultDialog = true }
+                                    .padding(horizontal = 12.dp)
+                                    .testTag("config_add_vault_button"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        tint = VaultObsidian,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = "+ Brankas Baru",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = VaultObsidian,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     PinLayerTextField(
-                        label = "Brankas $editingVaultTab - PIN Lapis 1 (6 Digit)",
+                        label = "Brankas $editingVaultTab - PIN Lapis 1 (6 Karakter Huruf/Angka)",
                         value = pin1Input,
-                        onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) pin1Input = it },
+                        onValueChange = { pin1Input = it },
                         tag = "input_pin_layer_1"
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     PinLayerTextField(
-                        label = "Brankas $editingVaultTab - PIN Lapis 2 (6 Digit)",
+                        label = "Brankas $editingVaultTab - PIN Lapis 2 (6 Karakter Huruf/Angka)",
                         value = pin2Input,
-                        onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) pin2Input = it },
+                        onValueChange = { pin2Input = it },
                         tag = "input_pin_layer_2"
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     PinLayerTextField(
-                        label = "Brankas $editingVaultTab - PIN Lapis 3 (6 Digit Otorisasi)",
+                        label = "Brankas $editingVaultTab - PIN Lapis 3 (6 Karakter Otorisasi)",
                         value = pin3Input,
-                        onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) pin3Input = it },
+                        onValueChange = { pin3Input = it },
                         tag = "input_pin_layer_3"
                     )
 
@@ -396,11 +505,14 @@ fun EncryptionScriptEngineScreen(
                     ) {
                         Button(
                             onClick = {
-                                if (pin1Input.length == 6 && pin2Input.length == 6 && pin3Input.length == 6) {
+                                if (SecurityConfig.isAlphanumericValidPin(pin1Input) &&
+                                    SecurityConfig.isAlphanumericValidPin(pin2Input) &&
+                                    SecurityConfig.isAlphanumericValidPin(pin3Input)
+                                ) {
                                     pinValidationError = null
                                     onSaveVaultPins(editingVaultTab, pin1Input, pin2Input, pin3Input)
                                 } else {
-                                    pinValidationError = "Ketiga PIN wajib tepat 6 digit angka!"
+                                    pinValidationError = "Ketiga PIN wajib tepat 6 karakter huruf kapital (A-Z) atau angka (0-9)!"
                                 }
                             },
                             modifier = Modifier
@@ -464,7 +576,7 @@ fun EncryptionScriptEngineScreen(
                                         color = VaultObsidian
                                     )
                                     Text(
-                                        text = "Aktif untuk Brankas 1 & Brankas 2",
+                                        text = "Aktif untuk semua brankas (hingga 10 brankas)",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = VaultObsidian.copy(alpha = 0.7f)
                                     )
@@ -480,6 +592,122 @@ fun EncryptionScriptEngineScreen(
                                 modifier = Modifier.testTag("biometric_toggle_switch")
                             )
                         }
+                    }
+                }
+            }
+        }
+
+        // 3B. Pencadangan Google Cloud Terenkripsi (Manual AES-256)
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(26.dp),
+                colors = CardDefaults.cardColors(containerColor = VaultPureWhite),
+                border = androidx.compose.foundation.BorderStroke(1.dp, VaultObsidian.copy(alpha = 0.08f))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudUpload,
+                            contentDescription = null,
+                            tint = VaultObsidian
+                        )
+                        Text(
+                            text = "Pencadangan Google Cloud Terenkripsi",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = VaultObsidian
+                        )
+                    }
+                    Text(
+                        text = "Cadangkan file dan database brankas ke paket arsip terenkripsi AES-256-GCM (.nyxpkg). Pencadangan ini bersifat manual murni tanpa sinkronisasi otomatis latar belakang.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = VaultTextMuted
+                    )
+
+                    Surface(
+                        color = VaultCream,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AccountCircle,
+                                    contentDescription = null,
+                                    tint = if (securityConfig.isGoogleLinked) VaultLime else VaultObsidian,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = if (securityConfig.isGoogleLinked) "Akun Google Terhubung" else "Belum Tertaut Akun Google",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = VaultObsidian
+                                    )
+                                    Text(
+                                        text = securityConfig.googleAccountEmail.ifBlank { "Tautkan akun Google untuk backup/restore cloud" },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = VaultTextMuted
+                                    )
+                                }
+                            }
+
+                            if (securityConfig.isGoogleLinked) {
+                                OutlinedButton(
+                                    onClick = onUnlinkGoogleAccount,
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, VaultCoral)
+                                ) {
+                                    Text("Putuskan", color = VaultCoral, style = MaterialTheme.typography.labelMedium)
+                                }
+                            } else {
+                                Button(
+                                    onClick = { showGoogleAccountDialog = true },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = VaultObsidian,
+                                        contentColor = VaultLime
+                                    )
+                                ) {
+                                    Text("Tautkan", style = MaterialTheme.typography.labelMedium)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Button(
+                        onClick = onBackupToCloud,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = VaultObsidian,
+                            contentColor = VaultLime
+                        )
+                    ) {
+                        Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Cadangkan Brankas ke Google Cloud (Manual)", style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
@@ -676,6 +904,28 @@ fun EncryptionScriptEngineScreen(
             }
         }
     }
+
+    if (showCreateVaultDialog) {
+        CreateNewVaultModalDialog(
+            nextVaultId = securityConfig.vaultCount + 1,
+            onDismiss = { showCreateVaultDialog = false },
+            onCreateVault = { p1, p2, p3 ->
+                showCreateVaultDialog = false
+                onAddNewVault(p1, p2, p3)
+            }
+        )
+    }
+
+    if (showGoogleAccountDialog) {
+        LinkGoogleAccountModalDialog(
+            currentEmail = securityConfig.googleAccountEmail,
+            onDismiss = { showGoogleAccountDialog = false },
+            onLinkAccount = { email ->
+                showGoogleAccountDialog = false
+                onLinkGoogleAccount(email)
+            }
+        )
+    }
 }
 
 @Composable
@@ -687,13 +937,18 @@ private fun PinLayerTextField(
 ) {
     OutlinedTextField(
         value = value,
-        onValueChange = onValueChange,
+        onValueChange = { input ->
+            val clean = input.uppercase().filter { it.isDigit() || (it in 'A'..'Z') }
+            if (clean.length <= 6) {
+                onValueChange(clean)
+            }
+        },
         modifier = Modifier
             .fillMaxWidth()
             .testTag(tag),
         label = { Text(label) },
         singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
         textStyle = TextStyle(
             fontFamily = JetBrainsMonoFontFamily,
             fontSize = 15.sp,
@@ -866,6 +1121,184 @@ fun VaultFileInspectorSheet(
             }
 
             Spacer(modifier = Modifier.height(22.dp))
+        }
+    }
+}
+
+@Composable
+private fun CreateNewVaultModalDialog(
+    nextVaultId: Int,
+    onDismiss: () -> Unit,
+    onCreateVault: (pin1: String, pin2: String, pin3: String) -> Unit
+) {
+    var p1 by remember { mutableStateOf("") }
+    var p2 by remember { mutableStateOf("") }
+    var p3 by remember { mutableStateOf("") }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(26.dp),
+            colors = CardDefaults.cardColors(containerColor = VaultPureWhite)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "Buat Brankas $nextVaultId Baru",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = VaultObsidian
+                )
+                Text(
+                    text = "Masukkan 3 lapis PIN alfanumerik (6 karakter huruf besar A-Z dan angka 0-9) untuk brankas baru ini.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = VaultTextMuted
+                )
+
+                PinLayerTextField(
+                    label = "PIN Lapis 1 (6 Karakter)",
+                    value = p1,
+                    onValueChange = { p1 = it },
+                    tag = "new_vault_pin1"
+                )
+                PinLayerTextField(
+                    label = "PIN Lapis 2 (6 Karakter)",
+                    value = p2,
+                    onValueChange = { p2 = it },
+                    tag = "new_vault_pin2"
+                )
+                PinLayerTextField(
+                    label = "PIN Lapis 3 (6 Karakter)",
+                    value = p3,
+                    onValueChange = { p3 = it },
+                    tag = "new_vault_pin3"
+                )
+
+                if (errorMsg != null) {
+                    Text(
+                        text = errorMsg!!,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = VaultCoral,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text("Batal")
+                    }
+                    Button(
+                        onClick = {
+                            val valid = SecurityConfig.isAlphanumericValidPin(p1) &&
+                                    SecurityConfig.isAlphanumericValidPin(p2) &&
+                                    SecurityConfig.isAlphanumericValidPin(p3)
+                            if (valid) {
+                                onCreateVault(p1, p2, p3)
+                            } else {
+                                errorMsg = "Semua PIN wajib 6 karakter huruf kapital (A-Z) atau angka (0-9)!"
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = VaultLime,
+                            contentColor = VaultObsidian
+                        )
+                    ) {
+                        Text("Buat Brankas")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LinkGoogleAccountModalDialog(
+    currentEmail: String,
+    onDismiss: () -> Unit,
+    onLinkAccount: (email: String) -> Unit
+) {
+    var emailInput by remember { mutableStateOf(currentEmail.ifBlank { "" }) }
+    var err by remember { mutableStateOf<String?>(null) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(26.dp),
+            colors = CardDefaults.cardColors(containerColor = VaultPureWhite)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "Tautkan Akun Google",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = VaultObsidian
+                )
+                Text(
+                    text = "Masukkan alamat email akun Google Anda untuk tujuan pencadangan terenkripsi manual ke Google Drive.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = VaultTextMuted
+                )
+
+                OutlinedTextField(
+                    value = emailInput,
+                    onValueChange = { emailInput = it },
+                    label = { Text("Email Google (e.g. user@gmail.com)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)
+                )
+
+                if (err != null) {
+                    Text(text = err!!, color = VaultCoral, style = MaterialTheme.typography.bodySmall)
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text("Batal")
+                    }
+                    Button(
+                        onClick = {
+                            if (emailInput.contains("@") && emailInput.contains(".")) {
+                                onLinkAccount(emailInput.trim())
+                            } else {
+                                err = "Format email tidak valid!"
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = VaultObsidian,
+                            contentColor = VaultLime
+                        )
+                    ) {
+                        Text("Tautkan")
+                    }
+                }
+            }
         }
     }
 }

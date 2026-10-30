@@ -411,7 +411,7 @@ fun VaultRichMediaViewerOverlay(
                         }
                         Text(
                             text = buildString {
-                                append("Brankas ${item.vaultProfileId} • ${formatFileSize(item.sizeBytes)}")
+                                append("Terenkripsi • ${formatFileSize(item.sizeBytes)}")
                                 if (!item.groupArchiveName.isNullOrBlank()) {
                                     append(" • ZIP: ${item.groupArchiveName}")
                                 }

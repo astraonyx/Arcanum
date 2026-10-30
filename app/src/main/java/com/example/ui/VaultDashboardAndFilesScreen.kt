@@ -135,7 +135,7 @@ fun VaultDashboardAndFilesContent(
                     modifier = Modifier.weight(1f)
                 ) {
                     NyxMascotAvatar(
-                        mood = if (activeVaultId == 2) MascotMood.STEALTH_SHADOW else MascotMood.HAPPY_VIBES,
+                        mood = MascotMood.HAPPY_VIBES,
                         size = 42.dp
                     )
                     Column {
@@ -144,25 +144,25 @@ fun VaultDashboardAndFilesContent(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = if (activeVaultId == 2) "Brankas 2" else "Brankas 1",
+                                text = "Arcanum Vault",
                                 style = MaterialTheme.typography.headlineMedium,
                                 color = VaultObsidian
                             )
                             Surface(
-                                color = if (activeVaultId == 2) VaultCoral else VaultLime,
+                                color = VaultLime,
                                 shape = RoundedCornerShape(50)
                             ) {
                                 Text(
-                                    text = if (activeVaultId == 2) "KEDUA" else "UTAMA",
+                                    text = "TERENKRIPSI",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = if (activeVaultId == 2) VaultPureWhite else VaultObsidian,
+                                    color = VaultObsidian,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                 )
                             }
                         }
                         Text(
-                            text = "$keyFingerprint • NYX2 Private Storage",
+                            text = "$keyFingerprint • AES-256-GCM Private Space",
                             style = MaterialTheme.typography.labelMedium,
                             color = VaultTextMuted,
                             maxLines = 1,
@@ -172,33 +172,6 @@ fun VaultDashboardAndFilesContent(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(14.dp))
-                            .instantTouchPress { onSwitchVaultModeClick(if (activeVaultId == 1) 2 else 1) }
-                            .testTag("switch_dual_vault_button"),
-                        color = VaultPureWhite,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, VaultObsidian.copy(alpha = 0.12f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SwapHoriz,
-                                contentDescription = "Pindah Brankas",
-                                tint = VaultObsidian,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = if (activeVaultId == 1) "V2" else "V1",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = VaultObsidian
-                            )
-                        }
-                    }
-
                     Surface(
                         modifier = Modifier
                             .clip(RoundedCornerShape(14.dp))
@@ -233,12 +206,12 @@ fun VaultDashboardAndFilesContent(
             NyxMascotCompanionBanner(
                 activeVaultId = activeVaultId,
                 headline = if (totalCount == 0) {
-                    "Halo! Yuk sembunyikan file atau unduh via Mori di Brankas $activeVaultId!"
+                    "Halo! Ruang rahasiamu aman terlindungi enkripsi AES-256-GCM."
                 } else {
                     "$encryptedCount dari $totalCount file aman terkunci (.NYX)!"
                 },
-                subtitle = "Ketuk maskot untuk animasi lompat Duolingo & ganti gaya",
-                mood = if (activeVaultId == 2) MascotMood.STEALTH_SHADOW else MascotMood.WAVE_HELLO,
+                subtitle = "Ketuk maskot untuk animasi & interaksi kosmik",
+                mood = MascotMood.WAVE_HELLO,
                 onQuickActionClick = onOpenMoriDownloaderClick,
                 quickActionLabel = "Mori Link"
             )
@@ -416,13 +389,13 @@ fun VaultDashboardAndFilesContent(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         NyxMascotAvatar(
-                            mood = if (activeVaultId == 2) MascotMood.STEALTH_SHADOW else MascotMood.WAVE_HELLO,
+                            mood = MascotMood.WAVE_HELLO,
                             size = 84.dp
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = if (allItems.isEmpty()) {
-                                "Brankas $activeVaultId Masih Kosong"
+                                "Brankas Masih Kosong"
                             } else {
                                 "Tidak Ada File yang Cocok"
                             },
@@ -503,7 +476,7 @@ private fun MinimalistVaultOverviewCard(
             ) {
                 Column {
                     Text(
-                        text = "Penyimpanan Brankas $activeVaultId",
+                        text = "Penyimpanan Terenkripsi",
                         style = MaterialTheme.typography.labelMedium,
                         color = VaultTextMuted
                     )

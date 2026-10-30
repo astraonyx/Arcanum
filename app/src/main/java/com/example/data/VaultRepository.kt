@@ -6,6 +6,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -19,24 +20,70 @@ private val Context.securityDataStore by preferencesDataStore(name = "trantor_ny
 
 data class SecurityConfig(
     val isFirstRunCompleted: Boolean = false,
+    val vaultCount: Int = 2,
     val vault1Pin1: String = "111111",
     val vault1Pin2: String = "222222",
     val vault1Pin3: String = "333333",
     val vault2Pin1: String = "444444",
     val vault2Pin2: String = "555555",
     val vault2Pin3: String = "666666",
+    val vaultPinsMap: Map<Int, Triple<String, String, String>> = emptyMap(),
     val biometricEnabled: Boolean = true,
     val fingerprintEnrolled: Boolean = true,
-    val recoveryQuestion: String = "Apa kata kunci pemulihan rahasia Anda?",
-    val recoveryAnswer: String = "nyxvault",
+    val recoveryQuestion: String = "Apa nama planet atau bintang rahasia Anda?",
+    val recoveryAnswer: String = "",
     val activeScriptName: String = EncryptionPreset.NYX2_DUAL_CIPHER.id,
-    val customScriptCode: String = EncryptionPreset.NYX2_DUAL_CIPHER.scriptTemplate
+    val customScriptCode: String = EncryptionPreset.NYX2_DUAL_CIPHER.scriptTemplate,
+    val googleAccountEmail: String = "",
+    val googleAccountDisplayName: String = "",
+    val googleAccountPhotoUrl: String = "",
+    val isGoogleLinked: Boolean = false
 ) {
     fun getPinsForVault(vaultId: Int): Triple<String, String, String> {
-        return if (vaultId == 2) {
-            Triple(vault2Pin1, vault2Pin2, vault2Pin3)
-        } else {
-            Triple(vault1Pin1, vault1Pin2, vault1Pin3)
+        vaultPinsMap[vaultId]?.let { return it }
+        return when (vaultId) {
+            2 -> Triple(vault2Pin1, vault2Pin2, vault2Pin3)
+            3 -> Triple("A1B2C3", "D4E5F6", "G7H8J9")
+            4 -> Triple("K1L2M3", "N4P5Q6", "R7S8T9")
+            5 -> Triple("U1V2W3", "X4Y5Z6", "A7B8C9")
+            6 -> Triple("D1E2F3", "G4H5J6", "K7L8M9")
+            7 -> Triple("N1P2Q3", "R4S5T6", "U7V8W9")
+            8 -> Triple("X1Y2Z3", "A4B5C6", "D7E8F9")
+            9 -> Triple("G1H2J3", "K4L5M6", "N7P8Q9")
+            10 -> Triple("R1S2T3", "U4V5W6", "X7Y8Z9")
+            else -> Triple(vault1Pin1, vault1Pin2, vault1Pin3)
+        }
+    }
+
+    fun findMatchingVault(p1: String, p2: String, p3: String): Int? {
+        val maxV = vaultCount.coerceIn(1, 10)
+        for (v in 1..maxV) {
+            val pins = getPinsForVault(v)
+            if (pins.first.equals(p1, ignoreCase = true) &&
+                pins.second.equals(p2, ignoreCase = true) &&
+                pins.third.equals(p3, ignoreCase = true)
+            ) {
+                return v
+            }
+        }
+        return null
+    }
+
+    fun findCandidateVaultsForLayer1(p1: String): List<Int> {
+        val maxV = vaultCount.coerceIn(1, 10)
+        val candidates = mutableListOf<Int>()
+        for (v in 1..maxV) {
+            val pins = getPinsForVault(v)
+            if (pins.first.equals(p1, ignoreCase = true)) {
+                candidates.add(v)
+            }
+        }
+        return candidates
+    }
+
+    companion object {
+        fun isAlphanumericValidPin(pin: String): Boolean {
+            return pin.length == 6 && pin.all { it.isDigit() || it in 'A'..'Z' || it in 'a'..'z' }
         }
     }
 }
@@ -47,6 +94,7 @@ class VaultRepository(
 ) {
     private object Keys {
         val FIRST_RUN_COMPLETED = booleanPreferencesKey("first_run_completed")
+        val VAULT_COUNT = intPreferencesKey("vault_count")
         val V1_PIN_1 = stringPreferencesKey("v1_pin_1")
         val V1_PIN_2 = stringPreferencesKey("v1_pin_2")
         val V1_PIN_3 = stringPreferencesKey("v1_pin_3")
@@ -59,6 +107,12 @@ class VaultRepository(
         val RECOVERY_ANSWER = stringPreferencesKey("recovery_answer")
         val ACTIVE_SCRIPT_ID = stringPreferencesKey("active_script_id")
         val CUSTOM_SCRIPT_CODE = stringPreferencesKey("custom_script_code")
+        val GOOGLE_ACCOUNT_EMAIL = stringPreferencesKey("google_account_email")
+        val GOOGLE_ACCOUNT_DISPLAY_NAME = stringPreferencesKey("google_account_display_name")
+        val GOOGLE_ACCOUNT_PHOTO_URL = stringPreferencesKey("google_account_photo_url")
+        val IS_GOOGLE_LINKED = booleanPreferencesKey("is_google_linked")
+
+        fun pinKey(vaultId: Int, layer: Int) = stringPreferencesKey("v${vaultId}_pin_${layer}")
     }
 
     val allItems: Flow<List<VaultItemEntity>> = vaultDao.getAllItems()
@@ -67,20 +121,37 @@ class VaultRepository(
         vaultDao.getItemsForVault(vaultId)
 
     val securityConfigFlow: Flow<SecurityConfig> = context.securityDataStore.data.map { prefs ->
+        val vCount = (prefs[Keys.VAULT_COUNT] ?: 2).coerceIn(1, 10)
+        val pinsMap = mutableMapOf<Int, Triple<String, String, String>>()
+        for (v in 1..10) {
+            val p1 = prefs[Keys.pinKey(v, 1)] ?: if (v == 1) (prefs[Keys.V1_PIN_1] ?: "111111") else if (v == 2) (prefs[Keys.V2_PIN_1] ?: "444444") else null
+            val p2 = prefs[Keys.pinKey(v, 2)] ?: if (v == 1) (prefs[Keys.V1_PIN_2] ?: "222222") else if (v == 2) (prefs[Keys.V2_PIN_2] ?: "555555") else null
+            val p3 = prefs[Keys.pinKey(v, 3)] ?: if (v == 1) (prefs[Keys.V1_PIN_3] ?: "333333") else if (v == 2) (prefs[Keys.V2_PIN_3] ?: "666666") else null
+            if (p1 != null && p2 != null && p3 != null) {
+                pinsMap[v] = Triple(p1, p2, p3)
+            }
+        }
+
         SecurityConfig(
             isFirstRunCompleted = prefs[Keys.FIRST_RUN_COMPLETED] ?: false,
-            vault1Pin1 = prefs[Keys.V1_PIN_1] ?: "111111",
-            vault1Pin2 = prefs[Keys.V1_PIN_2] ?: "222222",
-            vault1Pin3 = prefs[Keys.V1_PIN_3] ?: "333333",
-            vault2Pin1 = prefs[Keys.V2_PIN_1] ?: "444444",
-            vault2Pin2 = prefs[Keys.V2_PIN_2] ?: "555555",
-            vault2Pin3 = prefs[Keys.V2_PIN_3] ?: "666666",
+            vaultCount = vCount,
+            vault1Pin1 = prefs[Keys.V1_PIN_1] ?: (pinsMap[1]?.first ?: "111111"),
+            vault1Pin2 = prefs[Keys.V1_PIN_2] ?: (pinsMap[1]?.second ?: "222222"),
+            vault1Pin3 = prefs[Keys.V1_PIN_3] ?: (pinsMap[1]?.third ?: "333333"),
+            vault2Pin1 = prefs[Keys.V2_PIN_1] ?: (pinsMap[2]?.first ?: "444444"),
+            vault2Pin2 = prefs[Keys.V2_PIN_2] ?: (pinsMap[2]?.second ?: "555555"),
+            vault2Pin3 = prefs[Keys.V2_PIN_3] ?: (pinsMap[2]?.third ?: "666666"),
+            vaultPinsMap = pinsMap,
             biometricEnabled = prefs[Keys.BIOMETRIC_ENABLED] ?: true,
             fingerprintEnrolled = prefs[Keys.FINGERPRINT_ENROLLED] ?: true,
-            recoveryQuestion = prefs[Keys.RECOVERY_QUESTION] ?: "Apa kata kunci pemulihan rahasia Anda?",
-            recoveryAnswer = prefs[Keys.RECOVERY_ANSWER] ?: "nyxvault",
+            recoveryQuestion = prefs[Keys.RECOVERY_QUESTION] ?: "Apa nama planet atau bintang rahasia Anda?",
+            recoveryAnswer = prefs[Keys.RECOVERY_ANSWER] ?: "",
             activeScriptName = prefs[Keys.ACTIVE_SCRIPT_ID] ?: EncryptionPreset.NYX2_DUAL_CIPHER.id,
-            customScriptCode = prefs[Keys.CUSTOM_SCRIPT_CODE] ?: EncryptionPreset.NYX2_DUAL_CIPHER.scriptTemplate
+            customScriptCode = prefs[Keys.CUSTOM_SCRIPT_CODE] ?: EncryptionPreset.NYX2_DUAL_CIPHER.scriptTemplate,
+            googleAccountEmail = prefs[Keys.GOOGLE_ACCOUNT_EMAIL] ?: "",
+            googleAccountDisplayName = prefs[Keys.GOOGLE_ACCOUNT_DISPLAY_NAME] ?: "",
+            googleAccountPhotoUrl = prefs[Keys.GOOGLE_ACCOUNT_PHOTO_URL] ?: "",
+            isGoogleLinked = prefs[Keys.IS_GOOGLE_LINKED] ?: false
         )
     }
 
@@ -92,22 +163,72 @@ class VaultRepository(
         v2p2: String,
         v2p3: String,
         biometricEnabled: Boolean,
-        recoveryQuestion: String = "Apa kata kunci pemulihan rahasia Anda?",
-        recoveryAnswer: String = "nyxvault"
+        recoveryQuestion: String = "Apa nama planet atau bintang rahasia Anda?",
+        recoveryAnswer: String = "",
+        googleEmail: String = "",
+        googleDisplayName: String = ""
     ) {
         context.securityDataStore.edit { prefs ->
             prefs[Keys.FIRST_RUN_COMPLETED] = true
-            prefs[Keys.V1_PIN_1] = v1p1
-            prefs[Keys.V1_PIN_2] = v1p2
-            prefs[Keys.V1_PIN_3] = v1p3
-            prefs[Keys.V2_PIN_1] = v2p1
-            prefs[Keys.V2_PIN_2] = v2p2
-            prefs[Keys.V2_PIN_3] = v2p3
+            prefs[Keys.VAULT_COUNT] = 2
+            prefs[Keys.V1_PIN_1] = v1p1.uppercase().trim()
+            prefs[Keys.V1_PIN_2] = v1p2.uppercase().trim()
+            prefs[Keys.V1_PIN_3] = v1p3.uppercase().trim()
+            prefs[Keys.pinKey(1, 1)] = v1p1.uppercase().trim()
+            prefs[Keys.pinKey(1, 2)] = v1p2.uppercase().trim()
+            prefs[Keys.pinKey(1, 3)] = v1p3.uppercase().trim()
+
+            prefs[Keys.V2_PIN_1] = v2p1.uppercase().trim()
+            prefs[Keys.V2_PIN_2] = v2p2.uppercase().trim()
+            prefs[Keys.V2_PIN_3] = v2p3.uppercase().trim()
+            prefs[Keys.pinKey(2, 1)] = v2p1.uppercase().trim()
+            prefs[Keys.pinKey(2, 2)] = v2p2.uppercase().trim()
+            prefs[Keys.pinKey(2, 3)] = v2p3.uppercase().trim()
+
             prefs[Keys.BIOMETRIC_ENABLED] = biometricEnabled
             prefs[Keys.FINGERPRINT_ENROLLED] = true
-            prefs[Keys.RECOVERY_QUESTION] = recoveryQuestion.trim().ifBlank { "Apa kata kunci pemulihan rahasia Anda?" }
-            prefs[Keys.RECOVERY_ANSWER] = recoveryAnswer.trim().ifBlank { "nyxvault" }
+            prefs[Keys.RECOVERY_QUESTION] = recoveryQuestion.trim().ifBlank { "Apa nama planet atau bintang rahasia Anda?" }
+            prefs[Keys.RECOVERY_ANSWER] = recoveryAnswer.trim()
+
+            if (googleEmail.isNotBlank()) {
+                prefs[Keys.GOOGLE_ACCOUNT_EMAIL] = googleEmail.trim()
+                prefs[Keys.GOOGLE_ACCOUNT_DISPLAY_NAME] = googleDisplayName.trim()
+                prefs[Keys.IS_GOOGLE_LINKED] = true
+            }
         }
+    }
+
+    suspend fun setGoogleAccount(email: String, displayName: String, photoUrl: String = "") {
+        context.securityDataStore.edit { prefs ->
+            prefs[Keys.GOOGLE_ACCOUNT_EMAIL] = email.trim()
+            prefs[Keys.GOOGLE_ACCOUNT_DISPLAY_NAME] = displayName.trim()
+            prefs[Keys.GOOGLE_ACCOUNT_PHOTO_URL] = photoUrl.trim()
+            prefs[Keys.IS_GOOGLE_LINKED] = email.isNotBlank()
+        }
+    }
+
+    suspend fun unlinkGoogleAccount() {
+        context.securityDataStore.edit { prefs ->
+            prefs[Keys.GOOGLE_ACCOUNT_EMAIL] = ""
+            prefs[Keys.GOOGLE_ACCOUNT_DISPLAY_NAME] = ""
+            prefs[Keys.GOOGLE_ACCOUNT_PHOTO_URL] = ""
+            prefs[Keys.IS_GOOGLE_LINKED] = false
+        }
+    }
+
+    suspend fun addVault(pin1: String, pin2: String, pin3: String): Int {
+        var createdId = 0
+        context.securityDataStore.edit { prefs ->
+            val currentCount = (prefs[Keys.VAULT_COUNT] ?: 2).coerceIn(1, 10)
+            if (currentCount < 10) {
+                createdId = currentCount + 1
+                prefs[Keys.VAULT_COUNT] = createdId
+                prefs[Keys.pinKey(createdId, 1)] = pin1.uppercase().trim()
+                prefs[Keys.pinKey(createdId, 2)] = pin2.uppercase().trim()
+                prefs[Keys.pinKey(createdId, 3)] = pin3.uppercase().trim()
+            }
+        }
+        return createdId
     }
 
     suspend fun updateRecoveryCredentials(question: String, answer: String) {
@@ -119,15 +240,21 @@ class VaultRepository(
 
     suspend fun updatePinsForVault(vaultId: Int, pin1: String, pin2: String, pin3: String) {
         if (pin1.length == 6 && pin2.length == 6 && pin3.length == 6) {
+            val u1 = pin1.uppercase().trim()
+            val u2 = pin2.uppercase().trim()
+            val u3 = pin3.uppercase().trim()
             context.securityDataStore.edit { prefs ->
-                if (vaultId == 2) {
-                    prefs[Keys.V2_PIN_1] = pin1
-                    prefs[Keys.V2_PIN_2] = pin2
-                    prefs[Keys.V2_PIN_3] = pin3
-                } else {
-                    prefs[Keys.V1_PIN_1] = pin1
-                    prefs[Keys.V1_PIN_2] = pin2
-                    prefs[Keys.V1_PIN_3] = pin3
+                prefs[Keys.pinKey(vaultId, 1)] = u1
+                prefs[Keys.pinKey(vaultId, 2)] = u2
+                prefs[Keys.pinKey(vaultId, 3)] = u3
+                if (vaultId == 1) {
+                    prefs[Keys.V1_PIN_1] = u1
+                    prefs[Keys.V1_PIN_2] = u2
+                    prefs[Keys.V1_PIN_3] = u3
+                } else if (vaultId == 2) {
+                    prefs[Keys.V2_PIN_1] = u1
+                    prefs[Keys.V2_PIN_2] = u2
+                    prefs[Keys.V2_PIN_3] = u3
                 }
             }
         }

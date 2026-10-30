@@ -1,11 +1,13 @@
 package com.example.ui
 
 import android.app.Application
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.EncryptionPreset
 import com.example.data.EncryptionScriptEngine
+import com.example.data.GoogleCloudVaultBackupEngine
 import com.example.data.MoriDownloadResult
 import com.example.data.MoriDownloaderEngine
 import com.example.data.MoriExtractionMode
@@ -15,6 +17,7 @@ import com.example.data.VaultDatabase
 import com.example.data.VaultItemEntity
 import com.example.data.VaultRepository
 import com.example.data.ZipPreEncryptionScannerEngine
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -39,7 +42,6 @@ enum class AuthStage(val layerNumber: Int, val title: String) {
 enum class VaultTab {
     DASHBOARD,
     FILES,
-    MT_EXPLORER,
     MORI_DOWNLOADER,
     ZIP_SCANNER,
     MEDIA_PLAYER,
@@ -78,13 +80,21 @@ data class BiometricExportModalState(
     val errorMessage: String? = null
 )
 
+enum class PlaybackRepeatMode {
+    REPEAT_ONE,      // Ulangi 1 Video (Single video loop)
+    AUTO_ADVANCE,    // Auto Lanjutkan Playlist/Folder
+    REPEAT_PLAYLIST  // Ulangi Seluruh Playlist
+}
+
 data class MediaPlayerUiState(
     val currentTrack: VaultItemEntity? = null,
     val isPlaying: Boolean = false,
     val currentSeconds: Int = 0,
     val totalSeconds: Int = 180,
     val playbackSpeed: Float = 1.0f,
-    val isRepeatEnabled: Boolean = true
+    val isRepeatEnabled: Boolean = true,
+    val repeatMode: PlaybackRepeatMode = PlaybackRepeatMode.AUTO_ADVANCE,
+    val isHold2xActive: Boolean = false
 )
 
 class VaultViewModel(application: Application) : AndroidViewModel(application) {
@@ -100,6 +110,30 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     // Active Vault Mode (1 = Brankas Utama, 2 = Brankas Kedua / Dual Mode)
     private val _activeVaultId = MutableStateFlow(1)
     val activeVaultId: StateFlow<Int> = _activeVaultId.asStateFlow()
+
+    // Folder-Scoped Media Playlist Filter (null = Semua Video di Brankas Aktif)
+    private val _activeMediaFolder = MutableStateFlow<String?>(null)
+    val activeMediaFolder: StateFlow<String?> = _activeMediaFolder.asStateFlow()
+
+    fun selectMediaFolder(folderName: String?) {
+        _activeMediaFolder.value = folderName
+    }
+
+    fun moveMediaItemToPlaylist(item: VaultItemEntity, playlistName: String) {
+        viewModelScope.launch {
+            val updated = item.copy(groupArchiveName = playlistName.trim())
+            repository.updateItem(updated)
+            postBanner("Video '${item.name}' dipindahkan ke playlist: ${playlistName.trim()}")
+        }
+    }
+
+    fun setHold2xSpeed(isHolding: Boolean) {
+        val current = _mediaState.value
+        _mediaState.value = current.copy(
+            isHold2xActive = isHolding,
+            playbackSpeed = if (isHolding) 2.0f else 1.0f
+        )
+    }
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val allItems: StateFlow<List<VaultItemEntity>> = _activeVaultId
@@ -226,8 +260,10 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         v2p2: String,
         v2p3: String,
         biometricEnabled: Boolean,
-        recoveryQuestion: String = "Apa kata kunci pemulihan rahasia Anda?",
-        recoveryAnswer: String = "nyxvault"
+        recoveryQuestion: String = "Apa nama planet atau bintang rahasia Anda?",
+        recoveryAnswer: String = "",
+        googleEmail: String = "",
+        googleDisplayName: String = ""
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.completeFirstRunSetup(
@@ -239,30 +275,36 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                 v2p3 = v2p3,
                 biometricEnabled = biometricEnabled,
                 recoveryQuestion = recoveryQuestion,
-                recoveryAnswer = recoveryAnswer
+                recoveryAnswer = recoveryAnswer,
+                googleEmail = googleEmail,
+                googleDisplayName = googleDisplayName
             )
             _activeVaultId.value = 1
             _securityState.value = SecurityGateUiState(
                 stage = AuthStage.UNLOCKED,
                 candidateVaultId = 1
             )
-            postBanner("Brankas NYX2 siap digunakan! Impor file atau ZIP untuk disembunyikan.")
+            postBanner("Brankas Arcanum siap digunakan! Impor file atau unduh media untuk dienkripsi.")
         }
     }
 
     // --- 3-LAYER DUAL-VAULT PIN + BIOMETRIC SECURITY LOGIC ---
 
-    fun onPinDigitPressed(digit: Int) {
+    fun onPinCharPressed(char: Char) {
         val current = _securityState.value
         if (current.stage == AuthStage.BIOMETRIC_STEP || current.stage == AuthStage.UNLOCKED) return
         if (current.enteredPin.length >= 6) return
 
-        val nextPin = current.enteredPin + digit.toString()
+        val nextPin = current.enteredPin + char.uppercaseChar().toString()
         _securityState.value = current.copy(enteredPin = nextPin, errorMessage = null)
 
         if (nextPin.length == 6) {
             verifyCurrentLayerPin(nextPin)
         }
+    }
+
+    fun onPinDigitPressed(digit: Int) {
+        onPinCharPressed(digit.toString()[0])
     }
 
     fun onPinBackspacePressed() {
@@ -300,38 +342,30 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     private fun verifyCurrentLayerPin(submittedPin: String) {
         val cfg = securityConfig.value
         val current = _securityState.value
+        val cleanPin = submittedPin.uppercase().trim()
 
         when (current.stage) {
             AuthStage.PIN_LAYER_1 -> {
-                when (submittedPin) {
-                    cfg.vault1Pin1 -> {
-                        _securityState.value = current.copy(
-                            stage = AuthStage.PIN_LAYER_2,
-                            enteredPin = "",
-                            candidateVaultId = 1,
-                            errorMessage = null
-                        )
-                    }
-                    cfg.vault2Pin1 -> {
-                        _securityState.value = current.copy(
-                            stage = AuthStage.PIN_LAYER_2,
-                            enteredPin = "",
-                            candidateVaultId = 2,
-                            errorMessage = null
-                        )
-                    }
-                    else -> {
-                        _securityState.value = current.copy(
-                            enteredPin = "",
-                            errorMessage = "PIN Lapis 1 tidak valid. Silakan coba lagi."
-                        )
-                    }
+                val matchingVaults = cfg.findCandidateVaultsForLayer1(cleanPin)
+                if (matchingVaults.isNotEmpty()) {
+                    _securityState.value = current.copy(
+                        stage = AuthStage.PIN_LAYER_2,
+                        enteredPin = "",
+                        candidateVaultId = matchingVaults.first(),
+                        errorMessage = null
+                    )
+                } else {
+                    _securityState.value = current.copy(
+                        enteredPin = "",
+                        errorMessage = "PIN Lapis 1 tidak cocok dengan brankas mana pun."
+                    )
                 }
             }
 
             AuthStage.PIN_LAYER_2 -> {
-                val expectedPin2 = if (current.candidateVaultId == 2) cfg.vault2Pin2 else cfg.vault1Pin2
-                if (submittedPin == expectedPin2) {
+                val targetVault = if (current.candidateVaultId > 0) current.candidateVaultId else 1
+                val expectedPin2 = cfg.getPinsForVault(targetVault).second.uppercase().trim()
+                if (cleanPin == expectedPin2) {
                     _securityState.value = current.copy(
                         stage = AuthStage.PIN_LAYER_3,
                         enteredPin = "",
@@ -346,9 +380,9 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             AuthStage.PIN_LAYER_3 -> {
-                val expectedPin3 = if (current.candidateVaultId == 2) cfg.vault2Pin3 else cfg.vault1Pin3
-                if (submittedPin == expectedPin3) {
-                    val targetVault = if (current.candidateVaultId == 2) 2 else 1
+                val targetVault = if (current.candidateVaultId > 0) current.candidateVaultId else 1
+                val expectedPin3 = cfg.getPinsForVault(targetVault).third.uppercase().trim()
+                if (cleanPin == expectedPin3) {
                     _activeVaultId.value = targetVault
                     val nextStage = if (cfg.biometricEnabled) AuthStage.BIOMETRIC_STEP else AuthStage.UNLOCKED
                     _securityState.value = current.copy(
@@ -365,6 +399,79 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             else -> Unit
+        }
+    }
+
+    fun addNewVault(pin1: String, pin2: String, pin3: String) {
+        viewModelScope.launch {
+            val newVaultId = repository.addVault(pin1, pin2, pin3)
+            if (newVaultId > 0) {
+                postBanner("Brankas #$newVaultId berhasil dibuat dengan PIN 3-lapis baru!")
+            } else {
+                postBanner("Maksimal 10 brankas telah tercapai.")
+            }
+        }
+    }
+
+    fun linkGoogleAccount(email: String, displayName: String, photoUrl: String = "") {
+        viewModelScope.launch {
+            repository.setGoogleAccount(email, displayName, photoUrl)
+            postBanner("Akun Google $email berhasil ditautkan untuk pencadangan!")
+        }
+    }
+
+    fun unlinkGoogleAccount() {
+        viewModelScope.launch {
+            repository.unlinkGoogleAccount()
+            postBanner("Tautan akun Google telah diputus.")
+        }
+    }
+
+    fun backupActiveVaultToGoogleCloud(context: Context) {
+        viewModelScope.launch {
+            val vId = _activeVaultId.value
+            val cfg = securityConfig.value
+            val (p1, p2, p3) = cfg.getPinsForVault(vId)
+            val items = allItems.value
+
+            postBanner("Mengemas & mengenkripsi Brankas dengan AES-256-GCM...")
+            val res = GoogleCloudVaultBackupEngine.createEncryptedVaultPackage(
+                context = context,
+                vaultId = vId,
+                items = items,
+                p1 = p1,
+                p2 = p2,
+                p3 = p3
+            )
+            res.onSuccess { encFile ->
+                postBanner("Pencadangan berhasil! File: ${encFile.name} (${encFile.length() / 1024} KB)")
+            }.onFailure { err ->
+                postBanner("Gagal mencadangkan brankas: ${err.message}")
+            }
+        }
+    }
+
+    fun restoreVaultFromEncryptedPackage(context: Context, encFile: File) {
+        viewModelScope.launch {
+            val vId = _activeVaultId.value
+            val cfg = securityConfig.value
+            val (p1, p2, p3) = cfg.getPinsForVault(vId)
+
+            postBanner("Mendekripsi & memulihkan paket cadangan...")
+            val res = GoogleCloudVaultBackupEngine.restoreEncryptedVaultPackage(
+                context = context,
+                targetVaultId = vId,
+                encPackageFile = encFile,
+                p1 = p1,
+                p2 = p2,
+                p3 = p3,
+                repository = repository
+            )
+            res.onSuccess { count ->
+                postBanner("Pemulihan selesai! $count file berhasil dipulihkan.")
+            }.onFailure { err ->
+                postBanner("Gagal memulihkan cadangan: ${err.message}")
+            }
         }
     }
 
@@ -947,13 +1054,18 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         val playlist = mediaPlaylist.value
         if (playlist.isEmpty()) return
         val current = _mediaState.value.currentTrack
-        // Prefer sibling tracks from the same ZIP archive if available
-        val activeZip = current?.groupArchiveName
-        val effectiveList = if (!activeZip.isNullOrBlank()) {
-            val zipSiblings = playlist.filter { it.groupArchiveName == activeZip }
-            if (zipSiblings.size > 1) zipSiblings else playlist
+        val activeFolder = _activeMediaFolder.value
+        val effectiveList = if (!activeFolder.isNullOrBlank()) {
+            val folderItems = playlist.filter { it.groupArchiveName == activeFolder }
+            if (folderItems.isNotEmpty()) folderItems else playlist
         } else {
-            playlist
+            val activeZip = current?.groupArchiveName
+            if (!activeZip.isNullOrBlank()) {
+                val zipSiblings = playlist.filter { it.groupArchiveName == activeZip }
+                if (zipSiblings.size > 1) zipSiblings else playlist
+            } else {
+                playlist
+            }
         }
 
         val currentIndex = effectiveList.indexOfFirst { it.id == current?.id }
@@ -961,6 +1073,11 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
             if (currentIndex in 0 until effectiveList.lastIndex) {
                 effectiveList[currentIndex + 1]
             } else {
+                if (_mediaState.value.repeatMode == PlaybackRepeatMode.AUTO_ADVANCE) {
+                    // Reached end of folder and not looping whole playlist -> stop gracefully
+                    _mediaState.value = _mediaState.value.copy(isPlaying = false, currentSeconds = 0)
+                    return
+                }
                 effectiveList.first()
             }
         } else {
@@ -989,31 +1106,47 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         _mediaState.value = _mediaState.value.copy(playbackSpeed = speeds[nextIndex])
     }
 
-    fun toggleRepeatMode() {
+    fun cycleRepeatMode() {
+        val next = when (_mediaState.value.repeatMode) {
+            PlaybackRepeatMode.AUTO_ADVANCE -> PlaybackRepeatMode.REPEAT_ONE
+            PlaybackRepeatMode.REPEAT_ONE -> PlaybackRepeatMode.REPEAT_PLAYLIST
+            PlaybackRepeatMode.REPEAT_PLAYLIST -> PlaybackRepeatMode.AUTO_ADVANCE
+        }
+        val label = when (next) {
+            PlaybackRepeatMode.REPEAT_ONE -> "Ulangi 1 Video (Loop)"
+            PlaybackRepeatMode.AUTO_ADVANCE -> "Auto Lanjutkan Folder"
+            PlaybackRepeatMode.REPEAT_PLAYLIST -> "Ulangi Seluruh Playlist"
+        }
         _mediaState.value = _mediaState.value.copy(
-            isRepeatEnabled = !_mediaState.value.isRepeatEnabled
+            repeatMode = next,
+            isRepeatEnabled = next != PlaybackRepeatMode.AUTO_ADVANCE
         )
+        postBanner(label)
+    }
+
+    fun toggleRepeatMode() {
+        cycleRepeatMode()
     }
 
     private fun startPlaybackTicker() {
         playbackJob?.cancel()
         playbackJob = viewModelScope.launch {
             while (isActive && _mediaState.value.isPlaying) {
-                val delayMs = (1000L / _mediaState.value.playbackSpeed).toLong().coerceAtLeast(250L)
+                val effectiveSpeed = if (_mediaState.value.isHold2xActive) 2.0f else _mediaState.value.playbackSpeed
+                val delayMs = (1000L / effectiveSpeed).toLong().coerceAtLeast(150L)
                 delay(delayMs)
                 val state = _mediaState.value
                 val track = state.currentTrack ?: break
                 val duration = track.durationSeconds.coerceAtLeast(60)
                 val nextSec = state.currentSeconds + 1
                 if (nextSec >= duration) {
-                    if (state.isRepeatEnabled) {
-                        skipTrack(forward = true)
-                    } else {
-                        _mediaState.value = state.copy(
-                            isPlaying = false,
-                            currentSeconds = 0
-                        )
-                        break
+                    when (state.repeatMode) {
+                        PlaybackRepeatMode.REPEAT_ONE -> {
+                            _mediaState.value = state.copy(currentSeconds = 0)
+                        }
+                        PlaybackRepeatMode.AUTO_ADVANCE, PlaybackRepeatMode.REPEAT_PLAYLIST -> {
+                            skipTrack(forward = true)
+                        }
                     }
                 } else {
                     _mediaState.value = state.copy(
