@@ -443,8 +443,9 @@ fun CosmicDragonAvatar(
 
         val drawableRes = when {
             isSmall -> R.drawable.astrodracon_avatar_icon
-            isSparkle -> R.drawable.astrodracon_sparkle
-            else -> R.drawable.astrodracon_mascot
+            persona == MascotPersona.SOLAR_DRAKE -> R.drawable.mascot_kawaii_folder
+            persona == MascotPersona.AURORA_WYRM -> if (isSparkle) R.drawable.astrodracon_sparkle else R.drawable.astrodracon_mascot
+            else -> R.drawable.astrodracon_orbit_duo
         }
 
         Image(
