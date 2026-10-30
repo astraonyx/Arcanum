@@ -333,41 +333,6 @@ fun CosmicDragonAvatar(
             .testTag("nyx_mascot_avatar"),
         contentAlignment = Alignment.Center
     ) {
-        val cheerSin = sin(tapCheerProgress.value * PI).toFloat().coerceAtLeast(0f)
-        val jumpOffsetY = -breathePhase * 10f - cheerSin * 26f
-        val squashX = 1f + breathePhase * 0.03f + cheerSin * 0.12f
-        val squashY = 1f - breathePhase * 0.03f + cheerSin * 0.10f
-        val tiltDegrees = wavePhase * 3.5f + (sin(tapCheerProgress.value * PI * 2).toFloat() * 12f)
-
-        // Dynamic Shifting Galaxy Palette
-        val auraColor = when {
-            auraColorPhase < 0.33f -> {
-                val t = auraColorPhase / 0.33f
-                Color(
-                    red = (1f - t) * 0.48f + t * 0.02f,
-                    green = (1f - t) * 0.23f + t * 0.71f,
-                    blue = (1f - t) * 0.93f + t * 0.83f
-                )
-            }
-            auraColorPhase < 0.66f -> {
-                val t = (auraColorPhase - 0.33f) / 0.33f
-                Color(
-                    red = (1f - t) * 0.02f + t * 0.92f,
-                    green = (1f - t) * 0.71f + t * 0.28f,
-                    blue = (1f - t) * 0.83f + t * 0.60f
-                )
-            }
-            else -> {
-                val t = (auraColorPhase - 0.66f) / 0.34f
-                Color(
-                    red = (1f - t) * 0.92f + t * 0.48f,
-                    green = (1f - t) * 0.28f + t * 0.23f,
-                    blue = (1f - t) * 0.60f + t * 0.93f
-                )
-            }
-        }
-
-        // 1. Ambient Cosmic Glow Circle & Dynamic Floor Shadow
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = this.size.width
             val h = this.size.height
@@ -375,39 +340,429 @@ fun CosmicDragonAvatar(
             val cy = h * 0.52f
             val r = (w.coerceAtMost(h) * 0.44f)
 
-            // Cosmic Radial Glow Badge
+            // Resolve Normalized Mood
+            val effectiveMood = when (mood) {
+                MascotMood.WAVE_HELLO -> MascotMood.IDLE_BREATHE
+                MascotMood.GUARD_ALERT -> MascotMood.ALERT_FIRE
+                MascotMood.SHIELD_EYES -> MascotMood.PIN_SHIELD
+                MascotMood.HAPPY_VIBES -> MascotMood.SUCCESS_LEAP
+                else -> mood
+            }
+
+            val cheerSin = sin(tapCheerProgress.value * PI).toFloat().coerceAtLeast(0f)
+            val jumpOffsetY = -breathePhase * r * 0.12f - cheerSin * r * 0.38f
+            val squashX = 1f + breathePhase * 0.04f + cheerSin * 0.16f
+            val squashY = 1f - breathePhase * 0.04f + cheerSin * 0.14f
+            val tiltDegrees = wavePhase * 4.5f + (sin(tapCheerProgress.value * PI * 2).toFloat() * 15f)
+
+            // Dynamic Shifting Galaxy Palette
+            val auraColor = when {
+                auraColorPhase < 0.33f -> {
+                    val t = auraColorPhase / 0.33f
+                    Color(
+                        red = (1f - t) * 0.48f + t * 0.02f,
+                        green = (1f - t) * 0.23f + t * 0.71f,
+                        blue = (1f - t) * 0.93f + t * 0.83f
+                    )
+                }
+                auraColorPhase < 0.66f -> {
+                    val t = (auraColorPhase - 0.33f) / 0.33f
+                    Color(
+                        red = (1f - t) * 0.02f + t * 0.92f,
+                        green = (1f - t) * 0.71f + t * 0.28f,
+                        blue = (1f - t) * 0.83f + t * 0.60f
+                    )
+                }
+                else -> {
+                    val t = (auraColorPhase - 0.66f) / 0.34f
+                    Color(
+                        red = (1f - t) * 0.92f + t * 0.48f,
+                        green = (1f - t) * 0.28f + t * 0.23f,
+                        blue = (1f - t) * 0.60f + t * 0.93f
+                    )
+                }
+            }
+
+            // 1. Planetary Cosmic Aura Badge
             val badgeBrush = Brush.radialGradient(
                 colors = listOf(
-                    auraColor.copy(alpha = 0.30f + cheerSin * 0.20f),
-                    NebulaViolet.copy(alpha = 0.12f),
+                    auraColor.copy(alpha = 0.32f + cheerSin * 0.25f),
+                    NebulaViolet.copy(alpha = 0.15f),
                     Color.Transparent
                 ),
                 center = Offset(cx, cy),
-                radius = r * 1.50f
+                radius = r * 1.55f
             )
-            drawCircle(brush = badgeBrush, radius = r * 1.35f, center = Offset(cx, cy))
+            drawCircle(brush = badgeBrush, radius = r * 1.45f, center = Offset(cx, cy))
 
-            // Planetary Orbit Ring
+            // Planetary Orbit Ring (Cosmic Dragon Domain)
             val orbitPath = Path().apply {
-                addOval(androidx.compose.ui.geometry.Rect(cx - r * 1.15f, cy + r * 0.2f, cx + r * 1.15f, cy + r * 0.60f))
+                addOval(androidx.compose.ui.geometry.Rect(cx - r * 1.25f, cy + r * 0.2f, cx + r * 1.25f, cy + r * 0.62f))
             }
             drawPath(
                 path = orbitPath,
-                color = auraColor.copy(alpha = 0.40f),
-                style = Stroke(width = (w * 0.016f).coerceAtLeast(1.5f), cap = StrokeCap.Round)
+                color = auraColor.copy(alpha = 0.45f),
+                style = Stroke(width = (w * 0.018f).coerceAtLeast(1.5f), cap = StrokeCap.Round)
             )
 
             // Dynamic Floor Shadow
-            val shadowScale = (1f - breathePhase * 0.25f - cheerSin * 0.40f).coerceIn(0.3f, 1.1f)
+            val shadowScale = (1f - breathePhase * 0.3f - cheerSin * 0.45f).coerceIn(0.3f, 1.1f)
             drawOval(
-                color = Color.Black.copy(alpha = 0.35f * shadowScale),
-                topLeft = Offset(cx - r * 0.65f * shadowScale, h * 0.88f),
-                size = Size(r * 1.30f * shadowScale, h * 0.08f)
+                color = Color.Black.copy(alpha = 0.28f * shadowScale),
+                topLeft = Offset(cx - r * 0.72f * shadowScale, h * 0.86f),
+                size = Size(r * 1.44f * shadowScale, h * 0.08f)
             )
 
-            // Twinkling Stardust Orbit Particles
+            // 2. Transformed Dragon Body & Anatomy
+            withTransform({
+                translate(left = 0f, top = jumpOffsetY)
+                rotate(degrees = tiltDegrees, pivot = Offset(cx, cy + r * 0.4f))
+                scale(scaleX = squashX, scaleY = squashY, pivot = Offset(cx, cy + r * 0.5f))
+            }) {
+                val dragonBodyColor = Color(0xFF0F121C)
+                val dragonScaleColor = Color(0xFF1B2030)
+                val dragonBellyColor = Color(0xFF282F45)
+                val wingMembraneColor = auraColor.copy(alpha = 0.85f)
+                val clawColor = Color(0xFFE2E8F0)
+
+                // A. Sinuous Dragon Tail Swishing Behind Body
+                val tailWiggle = wavePhase * r * 0.16f
+                val tailPath = Path().apply {
+                    moveTo(cx + r * 0.42f, cy + r * 0.38f)
+                    cubicTo(
+                        cx + r * 0.75f, cy + r * 0.32f,
+                        cx + r * 0.95f + tailWiggle, cy - r * 0.05f,
+                        cx + r * 0.82f + tailWiggle, cy - r * 0.38f
+                    )
+                }
+                drawPath(
+                    path = tailPath,
+                    color = dragonBodyColor,
+                    style = Stroke(width = (r * 0.22f), cap = StrokeCap.Round)
+                )
+
+                // Tail Starlight Flame Spade
+                val spadeX = cx + r * 0.82f + tailWiggle
+                val spadeY = cy - r * 0.38f
+                val flameSpade = Path().apply {
+                    moveTo(spadeX, spadeY - r * 0.22f)
+                    lineTo(spadeX + r * 0.15f, spadeY)
+                    lineTo(spadeX, spadeY + r * 0.10f)
+                    lineTo(spadeX - r * 0.15f, spadeY)
+                    close()
+                }
+                drawPath(path = flameSpade, color = auraColor)
+                drawCircle(color = Color.White, radius = r * 0.06f, center = Offset(spadeX, spadeY - r * 0.04f))
+
+                // B. Quadruped Hind Legs (Left & Right)
+                // Hind Left Leg
+                drawRoundRect(
+                    color = dragonBodyColor,
+                    topLeft = Offset(cx - r * 0.78f, cy + r * 0.32f),
+                    size = Size(r * 0.28f, r * 0.46f),
+                    cornerRadius = CornerRadius(r * 0.12f, r * 0.12f)
+                )
+                // Hind Left Claws
+                drawCircle(color = clawColor, radius = r * 0.04f, center = Offset(cx - r * 0.74f, cy + r * 0.78f))
+                drawCircle(color = clawColor, radius = r * 0.04f, center = Offset(cx - r * 0.65f, cy + r * 0.78f))
+
+                // Hind Right Leg
+                drawRoundRect(
+                    color = dragonBodyColor,
+                    topLeft = Offset(cx + r * 0.48f, cy + r * 0.32f),
+                    size = Size(r * 0.28f, r * 0.46f),
+                    cornerRadius = CornerRadius(r * 0.12f, r * 0.12f)
+                )
+                // Hind Right Claws
+                drawCircle(color = clawColor, radius = r * 0.04f, center = Offset(cx + r * 0.54f, cy + r * 0.78f))
+                drawCircle(color = clawColor, radius = r * 0.04f, center = Offset(cx + r * 0.63f, cy + r * 0.78f))
+
+                // C. Dragon Wings (Left Wing & Right Wing)
+                val leftWingAngle = when (effectiveMood) {
+                    MascotMood.SUCCESS_LEAP -> -42f + wavePhase * 24f - cheerSin * 35f
+                    MascotMood.DOWNLOAD_HUNTER -> -55f + wavePhase * 10f
+                    MascotMood.ALERT_FIRE -> -35f + wavePhase * 18f
+                    else -> -16f + wavePhase * 10f
+                }
+                val rightWingAngle = when (effectiveMood) {
+                    MascotMood.SUCCESS_LEAP -> 42f - wavePhase * 24f + cheerSin * 35f
+                    MascotMood.DOWNLOAD_HUNTER -> 55f - wavePhase * 10f
+                    MascotMood.ALERT_FIRE -> 35f - wavePhase * 18f
+                    else -> 16f - wavePhase * 10f
+                }
+
+                if (effectiveMood != MascotMood.PIN_SHIELD) {
+                    // Left Dragon Wing
+                    withTransform({
+                        rotate(degrees = leftWingAngle, pivot = Offset(cx - r * 0.48f, cy - r * 0.05f))
+                    }) {
+                        val wingPath = Path().apply {
+                            moveTo(cx - r * 0.48f, cy - r * 0.05f)
+                            lineTo(cx - r * 1.15f, cy - r * 0.75f)
+                            cubicTo(
+                                cx - r * 1.25f, cy - r * 0.25f,
+                                cx - r * 0.85f, cy + r * 0.12f,
+                                cx - r * 0.48f, cy + r * 0.08f
+                            )
+                            close()
+                        }
+                        drawPath(path = wingPath, color = dragonScaleColor)
+                        drawPath(path = wingPath, color = wingMembraneColor.copy(alpha = 0.55f))
+                        // Wing bone strut
+                        drawLine(
+                            color = auraColor,
+                            start = Offset(cx - r * 0.48f, cy - r * 0.05f),
+                            end = Offset(cx - r * 1.15f, cy - r * 0.75f),
+                            strokeWidth = (w * 0.024f).coerceAtLeast(2f),
+                            cap = StrokeCap.Round
+                        )
+                    }
+
+                    // Right Dragon Wing
+                    withTransform({
+                        rotate(degrees = rightWingAngle, pivot = Offset(cx + r * 0.48f, cy - r * 0.05f))
+                    }) {
+                        val wingPath = Path().apply {
+                            moveTo(cx + r * 0.48f, cy - r * 0.05f)
+                            lineTo(cx + r * 1.15f, cy - r * 0.75f)
+                            cubicTo(
+                                cx + r * 1.25f, cy - r * 0.25f,
+                                cx + r * 0.85f, cy + r * 0.12f,
+                                cx + r * 0.48f, cy + r * 0.08f
+                            )
+                            close()
+                        }
+                        drawPath(path = wingPath, color = dragonScaleColor)
+                        drawPath(path = wingPath, color = wingMembraneColor.copy(alpha = 0.55f))
+                        // Wing bone strut
+                        drawLine(
+                            color = auraColor,
+                            start = Offset(cx + r * 0.48f, cy - r * 0.05f),
+                            end = Offset(cx + r * 1.15f, cy - r * 0.75f),
+                            strokeWidth = (w * 0.024f).coerceAtLeast(2f),
+                            cap = StrokeCap.Round
+                        )
+                    }
+                }
+
+                // D. Main Dragon Torso
+                drawRoundRect(
+                    color = dragonBodyColor,
+                    topLeft = Offset(cx - r * 0.68f, cy - r * 0.32f),
+                    size = Size(r * 1.36f, r * 1.05f),
+                    cornerRadius = CornerRadius(r * 0.52f, r * 0.52f)
+                )
+
+                // Segmented Cosmic Underbelly
+                drawRoundRect(
+                    color = dragonBellyColor,
+                    topLeft = Offset(cx - r * 0.42f, cy + r * 0.06f),
+                    size = Size(r * 0.84f, r * 0.56f),
+                    cornerRadius = CornerRadius(r * 0.32f, r * 0.32f)
+                )
+                // Underbelly glowing segment lines
+                for (seg in 0..2) {
+                    val lineY = cy + r * 0.18f + seg * r * 0.14f
+                    drawLine(
+                        color = auraColor.copy(alpha = 0.35f),
+                        start = Offset(cx - r * 0.28f, lineY),
+                        end = Offset(cx + r * 0.28f, lineY),
+                        strokeWidth = (w * 0.015f).coerceAtLeast(1.2f)
+                    )
+                }
+
+                // E. Quadruped Front Legs (Left & Right)
+                // Front Left Leg
+                drawRoundRect(
+                    color = dragonBodyColor,
+                    topLeft = Offset(cx - r * 0.45f, cy + r * 0.38f),
+                    size = Size(r * 0.24f, r * 0.44f),
+                    cornerRadius = CornerRadius(r * 0.10f, r * 0.10f)
+                )
+                drawCircle(color = clawColor, radius = r * 0.038f, center = Offset(cx - r * 0.42f, cy + r * 0.82f))
+                drawCircle(color = clawColor, radius = r * 0.038f, center = Offset(cx - r * 0.33f, cy + r * 0.82f))
+
+                // Front Right Leg
+                drawRoundRect(
+                    color = dragonBodyColor,
+                    topLeft = Offset(cx + r * 0.21f, cy + r * 0.38f),
+                    size = Size(r * 0.24f, r * 0.44f),
+                    cornerRadius = CornerRadius(r * 0.10f, r * 0.10f)
+                )
+                drawCircle(color = clawColor, radius = r * 0.038f, center = Offset(cx + r * 0.24f, cy + r * 0.82f))
+                drawCircle(color = clawColor, radius = r * 0.038f, center = Offset(cx + r * 0.33f, cy + r * 0.82f))
+
+                // F. Dragon Crystalline Horns & Crest Spines
+                val hornWiggle = wavePhase * r * 0.05f
+                val leftHorn = Path().apply {
+                    moveTo(cx - r * 0.52f, cy - r * 0.32f)
+                    lineTo(cx - r * 0.72f - hornWiggle, cy - r * 0.96f)
+                    lineTo(cx - r * 0.24f, cy - r * 0.55f)
+                    close()
+                }
+                val rightHorn = Path().apply {
+                    moveTo(cx + r * 0.52f, cy - r * 0.32f)
+                    lineTo(cx + r * 0.72f + hornWiggle, cy - r * 0.96f)
+                    lineTo(cx + r * 0.24f, cy - r * 0.55f)
+                    close()
+                }
+                drawPath(path = leftHorn, color = auraColor)
+                drawPath(path = rightHorn, color = auraColor)
+
+                // Central Crown Spike
+                val centerSpike = Path().apply {
+                    moveTo(cx - r * 0.12f, cy - r * 0.58f)
+                    lineTo(cx, cy - r * 0.82f)
+                    lineTo(cx + r * 0.12f, cy - r * 0.58f)
+                    close()
+                }
+                drawPath(path = centerSpike, color = StarlightCyan)
+
+                // G. Expressive Luminous Anime Dragon Eyes
+                val eyeY = cy - r * 0.14f
+                val leftEyeX = cx - r * 0.32f
+                val rightEyeX = cx + r * 0.32f
+                val eyeW = r * 0.44f
+                val fullEyeH = r * 0.50f
+                val currentEyeH = (fullEyeH * blinkHeightRatio).coerceAtLeast(r * 0.05f)
+
+                // Luminous Eye Sockets
+                drawCircle(color = auraColor.copy(alpha = 0.25f), radius = eyeW * 0.65f, center = Offset(leftEyeX, eyeY))
+                drawCircle(color = auraColor.copy(alpha = 0.25f), radius = eyeW * 0.65f, center = Offset(rightEyeX, eyeY))
+
+                drawOval(
+                    color = Color.White,
+                    topLeft = Offset(leftEyeX - eyeW * 0.5f, eyeY - currentEyeH * 0.5f),
+                    size = Size(eyeW, currentEyeH)
+                )
+                drawOval(
+                    color = Color.White,
+                    topLeft = Offset(rightEyeX - eyeW * 0.5f, eyeY - currentEyeH * 0.5f),
+                    size = Size(eyeW, currentEyeH)
+                )
+
+                if (blinkHeightRatio > 0.25f) {
+                    val pupilOffsetX = lookPhase * (eyeW * 0.12f)
+                    val pupilOffsetY = sin(breathePhase * PI).toFloat() * (-eyeW * 0.04f)
+                    val pupilW = eyeW * 0.32f
+                    val pupilH = currentEyeH * 0.68f
+
+                    // Slit/Oval Dragon Pupil
+                    drawOval(
+                        color = dragonBodyColor,
+                        topLeft = Offset(leftEyeX + pupilOffsetX - pupilW * 0.5f, eyeY + pupilOffsetY - pupilH * 0.5f),
+                        size = Size(pupilW, pupilH)
+                    )
+                    drawOval(
+                        color = dragonBodyColor,
+                        topLeft = Offset(rightEyeX + pupilOffsetX - pupilW * 0.5f, eyeY + pupilOffsetY - pupilH * 0.5f),
+                        size = Size(pupilW, pupilH)
+                    )
+
+                    // Stardust Eye Reflections
+                    drawCircle(color = Color.White, radius = pupilW * 0.38f, center = Offset(leftEyeX + pupilOffsetX - pupilW * 0.2f, eyeY + pupilOffsetY - pupilH * 0.25f))
+                    drawCircle(color = Color.White, radius = pupilW * 0.38f, center = Offset(rightEyeX + pupilOffsetX - pupilW * 0.2f, eyeY + pupilOffsetY - pupilH * 0.25f))
+                    drawCircle(color = auraColor, radius = pupilW * 0.22f, center = Offset(leftEyeX + pupilOffsetX + pupilW * 0.2f, eyeY + pupilOffsetY + pupilH * 0.22f))
+                    drawCircle(color = auraColor, radius = pupilW * 0.22f, center = Offset(rightEyeX + pupilOffsetX + pupilW * 0.2f, eyeY + pupilOffsetY + pupilH * 0.22f))
+                }
+
+                // H. Friendly Dragon Snout & Mouth
+                val snoutY = cy + r * 0.10f
+                // Tiny dragon nostrils
+                drawCircle(color = dragonScaleColor, radius = r * 0.03f, center = Offset(cx - r * 0.08f, snoutY))
+                drawCircle(color = dragonScaleColor, radius = r * 0.03f, center = Offset(cx + r * 0.08f, snoutY))
+
+                if (effectiveMood == MascotMood.SUCCESS_LEAP || cheerSin > 0.1f) {
+                    // Joyous smiling dragon mouth open
+                    val mouthPath = Path().apply {
+                        moveTo(cx - r * 0.24f, snoutY + r * 0.08f)
+                        quadraticTo(cx, snoutY + r * 0.32f, cx + r * 0.24f, snoutY + r * 0.08f)
+                        close()
+                    }
+                    drawPath(path = mouthPath, color = CosmicMagenta)
+                } else if (effectiveMood == MascotMood.ALERT_FIRE) {
+                    // Snarl / Alert spark mouth
+                    drawLine(
+                        color = SolarGold,
+                        start = Offset(cx - r * 0.22f, snoutY + r * 0.12f),
+                        end = Offset(cx + r * 0.22f, snoutY + r * 0.12f),
+                        strokeWidth = (w * 0.024f).coerceAtLeast(2f),
+                        cap = StrokeCap.Round
+                    )
+                } else {
+                    // Gentle cute smile
+                    val mouthPath = Path().apply {
+                        moveTo(cx - r * 0.18f, snoutY + r * 0.08f)
+                        quadraticTo(cx, snoutY + r * 0.16f, cx + r * 0.18f, snoutY + r * 0.08f)
+                    }
+                    drawPath(path = mouthPath, color = auraColor, style = Stroke(width = (w * 0.022f).coerceAtLeast(1.8f), cap = StrokeCap.Round))
+                }
+
+                // Rosy Dragon Cheeks
+                drawOval(
+                    color = CosmicMagenta.copy(alpha = 0.45f),
+                    topLeft = Offset(leftEyeX - eyeW * 0.58f, eyeY + currentEyeH * 0.32f),
+                    size = Size(eyeW * 0.45f, currentEyeH * 0.22f)
+                )
+                drawOval(
+                    color = CosmicMagenta.copy(alpha = 0.45f),
+                    topLeft = Offset(rightEyeX + eyeW * 0.12f, eyeY + currentEyeH * 0.32f),
+                    size = Size(eyeW * 0.45f, currentEyeH * 0.22f)
+                )
+
+                // I. PIN Shield: Wings wrap forward over eyes (Shy Dragon PIN Shield)
+                if (effectiveMood == MascotMood.PIN_SHIELD) {
+                    val peekGap = (sin(wavePhase * PI).toFloat() * r * 0.04f).coerceAtLeast(0f)
+                    // Left Wing Folded Over Left Eye
+                    drawRoundRect(
+                        color = dragonBodyColor,
+                        topLeft = Offset(leftEyeX - eyeW * 0.65f, eyeY - fullEyeH * 0.38f + peekGap),
+                        size = Size(eyeW * 1.35f, fullEyeH * 0.78f),
+                        cornerRadius = CornerRadius(r * 0.28f, r * 0.28f)
+                    )
+                    drawRoundRect(
+                        color = auraColor,
+                        topLeft = Offset(leftEyeX - eyeW * 0.65f, eyeY - fullEyeH * 0.38f + peekGap),
+                        size = Size(eyeW * 1.35f, fullEyeH * 0.78f),
+                        cornerRadius = CornerRadius(r * 0.28f, r * 0.28f),
+                        style = Stroke(width = (w * 0.022f).coerceAtLeast(1.5f))
+                    )
+
+                    // Right Wing Folded Over Right Eye
+                    drawRoundRect(
+                        color = dragonBodyColor,
+                        topLeft = Offset(rightEyeX - eyeW * 0.70f, eyeY - fullEyeH * 0.38f + peekGap),
+                        size = Size(eyeW * 1.35f, fullEyeH * 0.78f),
+                        cornerRadius = CornerRadius(r * 0.28f, r * 0.28f)
+                    )
+                    drawRoundRect(
+                        color = auraColor,
+                        topLeft = Offset(rightEyeX - eyeW * 0.70f, eyeY - fullEyeH * 0.38f + peekGap),
+                        size = Size(eyeW * 1.35f, fullEyeH * 0.78f),
+                        cornerRadius = CornerRadius(r * 0.28f, r * 0.28f),
+                        style = Stroke(width = (w * 0.022f).coerceAtLeast(1.5f))
+                    )
+                }
+
+                // J. MT Inspecting Accessory: Cosmic Magnifying Glass
+                if (effectiveMood == MascotMood.MT_INSPECTING) {
+                    val glassX = cx + r * 0.45f
+                    val glassY = cy + r * 0.12f
+                    drawCircle(color = StarlightCyan, radius = r * 0.22f, center = Offset(glassX, glassY), style = Stroke(width = 3f))
+                    drawCircle(color = StarlightCyan.copy(alpha = 0.25f), radius = r * 0.20f, center = Offset(glassX, glassY))
+                    drawLine(
+                        color = SolarGold,
+                        start = Offset(glassX + r * 0.14f, glassY + r * 0.14f),
+                        end = Offset(glassX + r * 0.35f, glassY + r * 0.35f),
+                        strokeWidth = 4f,
+                        cap = StrokeCap.Round
+                    )
+                }
+            }
+
+            // 3. Orbiting Twinkling Stardust Particles (Duolingo Stardust Burst)
             val sparkleAlpha = if (cheerSin > 0.05f) 1f else (0.45f + 0.45f * breathePhase)
-            val starRadius = (w * 0.040f) * (1f + cheerSin * 0.6f)
+            val starRadius = (w * 0.045f) * (1f + cheerSin * 0.6f)
             val starPositions = listOf(
                 Offset(w * 0.14f, h * (0.20f - breathePhase * 0.05f - cheerSin * 0.08f)),
                 Offset(w * 0.86f, h * (0.18f - (1f - breathePhase) * 0.05f - cheerSin * 0.10f)),
@@ -424,43 +779,18 @@ fun CosmicDragonAvatar(
                     color = starColor,
                     start = Offset(pos.x - starRadius, pos.y),
                     end = Offset(pos.x + starRadius, pos.y),
-                    strokeWidth = (w * 0.020f).coerceAtLeast(1.5f),
+                    strokeWidth = (w * 0.022f).coerceAtLeast(1.5f),
                     cap = StrokeCap.Round
                 )
                 drawLine(
                     color = starColor,
                     start = Offset(pos.x, pos.y - starRadius),
                     end = Offset(pos.x, pos.y + starRadius),
-                    strokeWidth = (w * 0.020f).coerceAtLeast(1.5f),
+                    strokeWidth = (w * 0.022f).coerceAtLeast(1.5f),
                     cap = StrokeCap.Round
                 )
             }
         }
-
-        // 2. Official Astrodracon Celestial Dragon Master Artwork
-        val isSparkle = mood == MascotMood.SUCCESS_LEAP || mood == MascotMood.ALERT_FIRE || cheerSin > 0.05f
-        val isSmall = size <= 48.dp
-
-        val drawableRes = when {
-            isSmall -> R.drawable.astrodracon_avatar_icon
-            persona == MascotPersona.SOLAR_DRAKE -> R.drawable.mascot_kawaii_folder
-            persona == MascotPersona.AURORA_WYRM -> if (isSparkle) R.drawable.astrodracon_sparkle else R.drawable.astrodracon_mascot
-            else -> R.drawable.astrodracon_orbit_duo
-        }
-
-        Image(
-            painter = painterResource(id = drawableRes),
-            contentDescription = "Astrodracon Guardian of the Cosmos",
-            modifier = Modifier
-                .fillMaxSize(if (isSmall) 0.94f else 0.88f)
-                .graphicsLayer {
-                    this.translationY = jumpOffsetY
-                    this.scaleX = squashX
-                    this.scaleY = squashY
-                    this.rotationZ = tiltDegrees
-                },
-            contentScale = ContentScale.Fit
-        )
     }
 }
 
