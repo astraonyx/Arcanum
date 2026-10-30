@@ -84,6 +84,23 @@ import com.example.ui.theme.VaultMintAccent
 import com.example.ui.theme.VaultMintCard
 import com.example.ui.theme.VaultObsidian
 import com.example.ui.theme.VaultPureWhite
+import com.example.ui.theme.CosmicBorderHairline
+import com.example.ui.theme.CosmicGlass
+import com.example.ui.theme.CosmicGradientGlassCard
+import com.example.ui.theme.CosmicGradientGlassHighlight
+import com.example.ui.theme.CosmicGradientCta
+import com.example.ui.theme.CosmicNebulaMesh
+import com.example.ui.theme.CosmicTextPure
+import com.example.ui.theme.CosmicTextSubtle
+import com.example.ui.theme.PastelSky
+import com.example.ui.theme.PastelLavender
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.PastelMint
+import com.example.ui.theme.PastelRose
+import com.example.ui.theme.PastelYellow
+import com.example.ui.theme.SolarGold
+import com.example.ui.theme.StarlightCyan
+import com.example.ui.theme.NebulaViolet
 import com.example.ui.theme.VaultSlate
 import com.example.ui.theme.VaultTextMuted
 import java.io.File
@@ -368,8 +385,8 @@ fun ZipScannerToolScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(26.dp),
-                    colors = CardDefaults.cardColors(containerColor = VaultPureWhite),
-                    border = androidx.compose.foundation.BorderStroke(1.5.dp, VaultObsidian.copy(alpha = 0.12f))
+                    colors = CardDefaults.cardColors(containerColor = CosmicGlass),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CosmicGradientGlassHighlight)
                 ) {
                     Column(
                         modifier = Modifier
@@ -611,14 +628,14 @@ private fun ScannerMetricPill(
 @Composable
 private fun StagedScanResultCard(item: StagedScanItem) {
     val cardBg = when (item.status) {
-        StagedFileStatus.CLEAN_READY -> VaultPureWhite
-        StagedFileStatus.DUPLICATE_REMOVED -> VaultCream
-        StagedFileStatus.INFECTED_WARNING -> VaultObsidian
+        StagedFileStatus.CLEAN_READY -> CosmicGlass
+        StagedFileStatus.DUPLICATE_REMOVED -> androidx.compose.ui.graphics.Color(0x331E293B)
+        StagedFileStatus.INFECTED_WARNING -> androidx.compose.ui.graphics.Color(0x33F43F5E)
     }
     val borderColor = when (item.status) {
-        StagedFileStatus.CLEAN_READY -> VaultObsidian.copy(alpha = 0.14f)
-        StagedFileStatus.DUPLICATE_REMOVED -> VaultAmber
-        StagedFileStatus.INFECTED_WARNING -> VaultCoral
+        StagedFileStatus.CLEAN_READY -> PastelMint.copy(alpha = 0.4f)
+        StagedFileStatus.DUPLICATE_REMOVED -> SolarGold.copy(alpha = 0.4f)
+        StagedFileStatus.INFECTED_WARNING -> PastelRose
     }
 
     Card(
@@ -670,7 +687,7 @@ private fun StagedScanResultCard(item: StagedScanItem) {
                                 StagedFileStatus.INFECTED_WARNING -> "TERDETEKSI VIRUS / MALWARE!"
                             },
                             style = MaterialTheme.typography.labelMedium,
-                            color = if (item.status == StagedFileStatus.INFECTED_WARNING) VaultPureWhite else VaultObsidian,
+                            color = CosmicTextPure,
                             fontWeight = FontWeight.Bold
                         )
                     }

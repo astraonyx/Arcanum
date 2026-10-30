@@ -33,15 +33,25 @@ val CosmicTextMuted = Color(0xFF94A3B8)
 val CosmicTextDark = Color(0xFF08090D)
 
 // Apple Minimalist Pastel Tokens (DESIGN.md Reference Standards)
-val PastelSky = Color(0xFF7DD3FC)       // #7DD3FC - Video indicator, active state
-val PastelLavender = Color(0xFFC4B5FD)  // #C4B5FD - Audio stream & tags
-val PastelPeach = Color(0xFFFED7AA)     // #FED7AA - Playlists & folders
-val PastelMint = Color(0xFF86EFAC)      // #86EFAC - Security verified, status
-val PastelRose = Color(0xFFFCA5A5)      // #FCA5A5 - Encryption lock, warnings
-val PastelYellow = Color(0xFFFEF08A)    // #FEF08A - Highlights & stars
-val CosmicGlass = Color(0xB8161E3A)     // Glassmorphism frosted card background
-val CosmicPillDock = Color(0xE00F172A)  // Floating pill dock background
-val AstrodraconSapphire = Color(0xFF3B82F6) // Celestial dragon sapphire
+val PastelSky = Color(0xFF38BDF8)       // Vibrant Apple Sky
+val PastelSkySoft = Color(0xFF7DD3FC)
+val PastelLavender = Color(0xFFA855F7)  // Vibrant Apple Purple
+val PastelLavenderSoft = Color(0xFFC4B5FD)
+val PastelPeach = Color(0xFFF97316)     // Vibrant Apple Coral/Peach
+val PastelPeachSoft = Color(0xFFFED7AA)
+val PastelMint = Color(0xFF10B981)      // Vibrant Apple Mint/Emerald
+val PastelMintSoft = Color(0xFF86EFAC)
+val PastelRose = Color(0xFFF43F5E)      // Vibrant Apple Rose/Crimson
+val PastelRoseSoft = Color(0xFFFCA5A5)
+val PastelYellow = Color(0xFFFBBF24)    // Vibrant Apple Sunshine Gold
+val PastelYellowSoft = Color(0xFFFEF08A)
+
+// Glassmorphism & Translucent Aura Tokens
+val CosmicGlass = Color(0xCC111827)          // 80% opacity deep space slate
+val CosmicGlassSurface = Color(0xD916223D)   // Elevated glass top
+val CosmicGlassSurfaceDark = Color(0xB80E1528) // Elevated glass bottom
+val CosmicPillDock = Color(0xE60D1322)       // Floating frosted glass dock
+val AstrodraconSapphire = Color(0xFF3B82F6)
 
 // Dynamic Gradients
 val CosmicGradientNebula = Brush.linearGradient(
@@ -55,6 +65,27 @@ val CosmicGradientFolderGold = Brush.linearGradient(
 )
 val CosmicGradientDarkCard = Brush.verticalGradient(
     colors = listOf(CosmicCardElevated, CosmicObsidian)
+)
+val CosmicGradientGlassCard = Brush.verticalGradient(
+    colors = listOf(Color(0xD918233C), Color(0xB80E1528))
+)
+val CosmicGradientGlassHighlight = Brush.linearGradient(
+    colors = listOf(Color(0x6638BDF8), Color(0x33A855F7), Color(0x1AFFFFFF), Color(0x00FFFFFF))
+)
+val CosmicGradientCta = Brush.horizontalGradient(
+    colors = listOf(Color(0xFF06B6D4), Color(0xFF6366F1), Color(0xFFA855F7))
+)
+val CosmicGradientGoldCta = Brush.horizontalGradient(
+    colors = listOf(Color(0xFFF59E0B), Color(0xFFEF4444))
+)
+val CosmicGradientEmeraldCta = Brush.horizontalGradient(
+    colors = listOf(Color(0xFF10B981), Color(0xFF06B6D4))
+)
+val CosmicGradientRoseCta = Brush.horizontalGradient(
+    colors = listOf(Color(0xFFF43F5E), Color(0xFFEC4899))
+)
+val CosmicNebulaMesh = Brush.verticalGradient(
+    colors = listOf(Color(0xFF070913), Color(0xFF0E1326), Color(0xFF080A15))
 )
 
 // =========================================================================

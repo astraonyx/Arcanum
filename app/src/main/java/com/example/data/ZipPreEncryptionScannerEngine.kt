@@ -579,6 +579,8 @@ object ZipPreEncryptionScannerEngine {
         return null
     }
 
+    private const val MAX_TOTAL_RECURSIVE_ZIP_ENTRIES = 2500
+
     private fun extractZipToStaging(
         context: Context,
         zipUri: Uri,
@@ -586,16 +588,22 @@ object ZipPreEncryptionScannerEngine {
         stagingDir: File
     ): List<Triple<File, String, String>> {
         val extracted = mutableListOf<Triple<File, String, String>>()
-        try {
-            context.contentResolver.openInputStream(zipUri)?.use { rawInput ->
-                ZipInputStream(rawInput.buffered()).use { zis ->
+        var totalEntriesCounter = 0
+
+        fun unpackZipStream(
+            inputStream: java.io.InputStream,
+            parentArchiveName: String
+        ) {
+            try {
+                ZipInputStream(inputStream.buffered()).use { zis ->
                     var entry: ZipEntry? = zis.nextEntry
                     var idx = 0
-                    while (entry != null) {
+                    while (entry != null && totalEntriesCounter < MAX_TOTAL_RECURSIVE_ZIP_ENTRIES) {
                         if (!entry.isDirectory) {
                             val rawName = entry.name.substringAfterLast('/')
                             if (rawName.isNotBlank() && !rawName.startsWith(".")) {
                                 idx++
+                                totalEntriesCounter++
                                 val safeName = rawName.replace(Regex("[^a-zA-Z0-9._\\-]"), "_")
                                 val outFile = File(stagingDir, "zip_${System.nanoTime()}_${idx}_$safeName")
                                 FileOutputStream(outFile).use { out ->
@@ -610,7 +618,19 @@ object ZipPreEncryptionScannerEngine {
                                     }
                                 }
                                 if (outFile.length() > 0L) {
-                                    extracted.add(Triple(outFile, rawName, zipDisplayName))
+                                    val ext = rawName.substringAfterLast('.', "").lowercase()
+                                    if (ext == "zip" && totalEntriesCounter < MAX_TOTAL_RECURSIVE_ZIP_ENTRIES) {
+                                        try {
+                                            outFile.inputStream().use { nestedInput ->
+                                                unpackZipStream(nestedInput, "$parentArchiveName > $rawName")
+                                            }
+                                        } catch (_: Exception) {
+                                        } finally {
+                                            outFile.delete()
+                                        }
+                                    } else {
+                                        extracted.add(Triple(outFile, rawName, parentArchiveName))
+                                    }
                                 } else {
                                     outFile.delete()
                                 }
@@ -620,6 +640,13 @@ object ZipPreEncryptionScannerEngine {
                         entry = zis.nextEntry
                     }
                 }
+            } catch (_: Exception) {
+            }
+        }
+
+        try {
+            context.contentResolver.openInputStream(zipUri)?.use { rawInput ->
+                unpackZipStream(rawInput, zipDisplayName)
             }
         } catch (_: Exception) {
         }

@@ -113,6 +113,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.CosmicBorderHairline
+import com.example.ui.theme.CosmicGradientCta
 import com.example.ui.theme.CosmicMagenta
 import com.example.ui.theme.CosmicObsidian
 import com.example.ui.theme.CosmicSurface
@@ -160,6 +161,7 @@ enum class MascotMood {
 }
 
 enum class MascotPersona(val label: String, val badgeColor: Color) {
+    KAWAII_FOLDER("Kawaii Folder Companion", Color(0xFFF59E0B)),
     COSMIC_DRAGON("Astra Galaxy Dragon", Color(0xFF7C3AED)),
     AURORA_WYRM("Aurora Wyrm", Color(0xFF06B6D4)),
     SOLAR_DRAKE("Solar Drake", Color(0xFFF59E0B)),
@@ -228,7 +230,7 @@ fun CosmicDragonAvatar(
     mood: MascotMood,
     modifier: Modifier = Modifier,
     size: Dp = 112.dp,
-    persona: MascotPersona = MascotPersona.COSMIC_DRAGON,
+    persona: MascotPersona = MascotPersona.KAWAII_FOLDER,
     externalCheerKey: Int = 0
 ) {
     val scope = rememberCoroutineScope()
@@ -413,13 +415,188 @@ fun CosmicDragonAvatar(
                 size = Size(r * 1.44f * shadowScale, h * 0.08f)
             )
 
-            // 2. Transformed Dragon Body & Anatomy
+            // 2. Transformed Dragon / Kawaii Folder Mascot Body & Anatomy
             withTransform({
                 translate(left = 0f, top = jumpOffsetY)
-                rotate(degrees = tiltDegrees, pivot = Offset(cx, cy + r * 0.4f))
+                rotate(degrees = if (persona == MascotPersona.KAWAII_FOLDER) tiltDegrees * 0.6f else tiltDegrees, pivot = Offset(cx, cy + r * 0.4f))
                 scale(scaleX = squashX, scaleY = squashY, pivot = Offset(cx, cy + r * 0.5f))
             }) {
-                val dragonBodyColor = Color(0xFF0F121C)
+                if (persona == MascotPersona.KAWAII_FOLDER) {
+                    // 1. Blue Folder Tab Peek (Behind)
+                    val tabW = r * 0.85f
+                    val tabH = r * 0.50f
+                    val tabX = cx - r * 0.78f
+                    val tabY = cy - r * 0.88f
+                    drawRoundRect(
+                        brush = Brush.linearGradient(
+                            listOf(Color(0xFF60A5FA), Color(0xFF2563EB)),
+                            start = Offset(tabX, tabY),
+                            end = Offset(tabX + tabW, tabY + tabH)
+                        ),
+                        topLeft = Offset(tabX, tabY),
+                        size = Size(tabW, tabH),
+                        cornerRadius = CornerRadius(r * 0.16f, r * 0.16f)
+                    )
+
+                    // 2. White Paper Peek (Behind)
+                    val paperW = r * 0.95f
+                    val paperH = r * 0.38f
+                    val paperX = cx - r * 0.55f
+                    val paperY = cy - r * 0.92f
+                    drawRoundRect(
+                        color = Color.White.copy(alpha = 0.95f),
+                        topLeft = Offset(paperX, paperY),
+                        size = Size(paperW, paperH),
+                        cornerRadius = CornerRadius(r * 0.10f, r * 0.10f)
+                    )
+
+                    // 3. Main Folder Squircle Body (Golden-Amber Gradient)
+                    val bodyW = r * 1.88f
+                    val bodyH = r * 1.52f
+                    val bodyX = cx - r * 0.94f
+                    val bodyY = cy - r * 0.68f
+                    val bodyRadius = r * 0.36f
+                    drawRoundRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFFFFE066),
+                                Color(0xFFFBBF24),
+                                Color(0xFFF59E0B),
+                                Color(0xFFD97706)
+                            ),
+                            startY = bodyY,
+                            endY = bodyY + bodyH
+                        ),
+                        topLeft = Offset(bodyX, bodyY),
+                        size = Size(bodyW, bodyH),
+                        cornerRadius = CornerRadius(bodyRadius, bodyRadius)
+                    )
+
+                    // Top Rim Glossy Highlight
+                    drawRoundRect(
+                        color = Color.White.copy(alpha = 0.40f),
+                        topLeft = Offset(bodyX + r * 0.16f, bodyY + r * 0.08f),
+                        size = Size(bodyW - r * 0.32f, r * 0.14f),
+                        cornerRadius = CornerRadius(r * 0.07f, r * 0.07f)
+                    )
+                    // Glossy Star/Dot Accent
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.55f),
+                        radius = r * 0.07f,
+                        center = Offset(bodyX + r * 0.30f, bodyY + r * 0.34f)
+                    )
+
+                    // 4. Eyes & Facial Expression
+                    val eyeW = r * 0.28f
+                    val fullEyeH = r * 0.38f
+                    val eyeH = (fullEyeH * blinkHeightRatio).coerceAtLeast(r * 0.04f)
+                    val leftEyeX = cx - r * 0.42f + lookPhase * (r * 0.04f)
+                    val rightEyeX = cx + r * 0.42f + lookPhase * (r * 0.04f)
+                    val eyeY = cy - r * 0.06f
+
+                    if (effectiveMood == MascotMood.SUCCESS_LEAP || cheerSin > 0.15f) {
+                        // Joyful Arch Eyes: ^  ^
+                        val leftArch = Path().apply {
+                            moveTo(leftEyeX - eyeW * 0.5f, eyeY + eyeH * 0.15f)
+                            quadraticTo(leftEyeX, eyeY - eyeH * 0.55f, leftEyeX + eyeW * 0.5f, eyeY + eyeH * 0.15f)
+                        }
+                        val rightArch = Path().apply {
+                            moveTo(rightEyeX - eyeW * 0.5f, eyeY + eyeH * 0.15f)
+                            quadraticTo(rightEyeX, eyeY - eyeH * 0.55f, rightEyeX + eyeW * 0.5f, eyeY + eyeH * 0.15f)
+                        }
+                        drawPath(leftArch, color = Color(0xFF0F172A), style = Stroke(width = (w * 0.032f).coerceAtLeast(2.4f), cap = StrokeCap.Round))
+                        drawPath(rightArch, color = Color(0xFF0F172A), style = Stroke(width = (w * 0.032f).coerceAtLeast(2.4f), cap = StrokeCap.Round))
+                    } else if (effectiveMood == MascotMood.PIN_SHIELD) {
+                        // Shield/Wink: Left wink, Right eye shielded
+                        val leftArch = Path().apply {
+                            moveTo(leftEyeX - eyeW * 0.5f, eyeY)
+                            quadraticTo(leftEyeX, eyeY - eyeH * 0.4f, leftEyeX + eyeW * 0.5f, eyeY)
+                        }
+                        drawPath(leftArch, color = Color(0xFF0F172A), style = Stroke(width = (w * 0.032f).coerceAtLeast(2.4f), cap = StrokeCap.Round))
+                        drawRoundRect(
+                            color = Color(0xFF60A5FA),
+                            topLeft = Offset(rightEyeX - eyeW * 0.7f, eyeY - eyeH * 0.5f),
+                            size = Size(eyeW * 1.4f, eyeH * 1.2f),
+                            cornerRadius = CornerRadius(r * 0.1f, r * 0.1f)
+                        )
+                    } else {
+                        // Normal Anime Big Glossy Eyes
+                        drawOval(
+                            color = Color(0xFF0F172A),
+                            topLeft = Offset(leftEyeX - eyeW * 0.5f, eyeY - eyeH * 0.5f),
+                            size = Size(eyeW, eyeH)
+                        )
+                        drawOval(
+                            color = Color(0xFF1E3A8A),
+                            topLeft = Offset(leftEyeX - eyeW * 0.42f, eyeY - eyeH * 0.40f),
+                            size = Size(eyeW * 0.84f, eyeH * 0.80f)
+                        )
+                        if (blinkHeightRatio > 0.35f) {
+                            drawCircle(Color.White, radius = eyeW * 0.24f, center = Offset(leftEyeX - eyeW * 0.14f, eyeY - eyeH * 0.22f))
+                            drawCircle(Color.White, radius = eyeW * 0.12f, center = Offset(leftEyeX + eyeW * 0.16f, eyeY + eyeH * 0.18f))
+                        }
+
+                        drawOval(
+                            color = Color(0xFF0F172A),
+                            topLeft = Offset(rightEyeX - eyeW * 0.5f, eyeY - eyeH * 0.5f),
+                            size = Size(eyeW, eyeH)
+                        )
+                        drawOval(
+                            color = Color(0xFF1E3A8A),
+                            topLeft = Offset(rightEyeX - eyeW * 0.42f, eyeY - eyeH * 0.40f),
+                            size = Size(eyeW * 0.84f, eyeH * 0.80f)
+                        )
+                        if (blinkHeightRatio > 0.35f) {
+                            drawCircle(Color.White, radius = eyeW * 0.24f, center = Offset(rightEyeX - eyeW * 0.14f, eyeY - eyeH * 0.22f))
+                            drawCircle(Color.White, radius = eyeW * 0.12f, center = Offset(rightEyeX + eyeW * 0.16f, eyeY + eyeH * 0.18f))
+                        }
+                    }
+
+                    // 5. Blush Cheeks (Rosy Pink #F43F5E)
+                    val blushW = r * 0.22f
+                    val blushH = r * 0.12f
+                    val blushAlpha = 0.48f + cheerSin * 0.35f
+                    drawOval(
+                        color = Color(0xFFF43F5E).copy(alpha = blushAlpha),
+                        topLeft = Offset(cx - r * 0.68f, cy + r * 0.18f),
+                        size = Size(blushW, blushH)
+                    )
+                    drawOval(
+                        color = Color(0xFFF43F5E).copy(alpha = blushAlpha),
+                        topLeft = Offset(cx + r * 0.46f, cy + r * 0.18f),
+                        size = Size(blushW, blushH)
+                    )
+
+                    // 6. Cute Mouth
+                    val mouthY = cy + r * 0.22f
+                    if (effectiveMood == MascotMood.SUCCESS_LEAP || cheerSin > 0.15f) {
+                        val openMouth = Path().apply {
+                            moveTo(cx - r * 0.18f, mouthY)
+                            quadraticTo(cx, mouthY + r * 0.22f, cx + r * 0.18f, mouthY)
+                            close()
+                        }
+                        drawPath(openMouth, color = Color(0xFF0F172A))
+                        drawCircle(color = Color(0xFFF43F5E), radius = r * 0.08f, center = Offset(cx, mouthY + r * 0.12f))
+                    } else if (effectiveMood == MascotMood.ALERT_FIRE) {
+                        drawCircle(color = Color(0xFF0F172A), radius = r * 0.07f, center = Offset(cx, mouthY + r * 0.04f))
+                    } else {
+                        val smilePath = Path().apply {
+                            moveTo(cx - r * 0.16f, mouthY)
+                            quadraticTo(cx, mouthY + r * 0.16f, cx + r * 0.16f, mouthY)
+                        }
+                        drawPath(
+                            smilePath,
+                            color = Color(0xFF0F172A),
+                            style = Stroke(width = (w * 0.030f).coerceAtLeast(2.4f), cap = StrokeCap.Round)
+                        )
+                    }
+
+                    // 7. Mini Sparkle Stars Floating on Left & Right
+                    val starPulse = 0.8f + (sin(breathePhase * PI * 2).toFloat() * 0.2f)
+                    drawCircle(Color.White.copy(alpha = 0.75f), radius = r * 0.045f * starPulse, center = Offset(cx - r * 1.15f, cy - r * 0.35f))
+                    drawCircle(Color.White.copy(alpha = 0.75f), radius = r * 0.055f * starPulse, center = Offset(cx + r * 1.15f, cy - r * 0.45f))
+                } else {
+                    val dragonBodyColor = Color(0xFF0F121C)
                 val dragonScaleColor = Color(0xFF1B2030)
                 val dragonBellyColor = Color(0xFF282F45)
                 val wingMembraneColor = auraColor.copy(alpha = 0.85f)
@@ -758,6 +935,7 @@ fun CosmicDragonAvatar(
                         cap = StrokeCap.Round
                     )
                 }
+                } // End of else (Dragon rendering)
             }
 
             // 3. Orbiting Twinkling Stardust Particles (Duolingo Stardust Burst)
@@ -834,7 +1012,7 @@ fun CosmicDragonCompanionBanner(
     val dragonQuips = remember(activeVaultId, headline) {
         listOf(
             headline,
-            "Astra siaga! Orbit Brankas $activeVaultId terlindungi penuh!",
+            "Astra siaga! Ruang brankas terenkripsi terlindungi penuh!",
             "Sentuh aku untuk melihat semburan api bintang!",
             "MT Explorer & Mori Downloader siap meluncur!"
         )
@@ -981,8 +1159,12 @@ fun FirstRunOnboardingWizardScreen(
         v2p2: String,
         v2p3: String,
         biometricEnabled: Boolean,
-        recoveryQuestion: String,
-        recoveryAnswer: String,
+        recoveryQuestion1: String,
+        recoveryAnswer1: String,
+        recoveryQuestion2: String,
+        recoveryAnswer2: String,
+        recoveryQuestion3: String,
+        recoveryAnswer3: String,
         googleEmail: String,
         googleDisplayName: String
     ) -> Unit
@@ -999,12 +1181,19 @@ fun FirstRunOnboardingWizardScreen(
 
     var biometricEnabled by remember { mutableStateOf(true) }
     var isFingerprintRegisteredInWizard by remember { mutableStateOf(false) }
+    var stealthModeRule by remember { mutableStateOf(true) }
+    var encryptedExportRule by remember { mutableStateOf(true) }
+    var autoLockRule by remember { mutableStateOf(true) }
     var fingerprintStatusMessage by remember {
         mutableStateOf("Tempel & tahan jari Anda pada sensor di bawah hingga 100% untuk mendaftarkan sidik jari.")
     }
 
-    var recoveryQuestion by remember { mutableStateOf("Apa nama planet atau bintang rahasia Anda?") }
-    var recoveryAnswer by remember { mutableStateOf("") }
+    var recoveryQuestion1 by remember { mutableStateOf("Apa nama kota kelahiran Anda?") }
+    var recoveryAnswer1 by remember { mutableStateOf("") }
+    var recoveryQuestion2 by remember { mutableStateOf("Apa nama hewan peliharaan pertama Anda?") }
+    var recoveryAnswer2 by remember { mutableStateOf("") }
+    var recoveryQuestion3 by remember { mutableStateOf("Apa makanan favorit masa kecil Anda?") }
+    var recoveryAnswer3 by remember { mutableStateOf("") }
     var googleEmail by remember { mutableStateOf("") }
     var googleDisplayName by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -1058,7 +1247,7 @@ fun FirstRunOnboardingWizardScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                for (step in 0..3) {
+                for (step in 0..4) {
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -1089,7 +1278,7 @@ fun FirstRunOnboardingWizardScreen(
                 shape = RoundedCornerShape(50)
             ) {
                 Text(
-                    text = "CELESTIAL SETUP • LANGKAH ${currentStep + 1} / 4",
+                    text = "CELESTIAL SETUP • LANGKAH ${currentStep + 1} / 5",
                     style = MaterialTheme.typography.labelMedium,
                     color = StarlightCyan,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
@@ -1378,7 +1567,7 @@ fun FirstRunOnboardingWizardScreen(
                     }
                 }
 
-                else -> {
+                3 -> {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(26.dp),
@@ -1397,7 +1586,7 @@ fun FirstRunOnboardingWizardScreen(
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "Atur kata kunci pemulihan jika lupa PIN dan daftarkan sidik jari Anda.",
+                                text = "Atur 3 pertanyaan keamanan jika lupa PIN dan hubungkan akun Google Anda.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = CosmicTextMuted,
                                 textAlign = TextAlign.Center
@@ -1405,11 +1594,12 @@ fun FirstRunOnboardingWizardScreen(
 
                             Spacer(modifier = Modifier.height(14.dp))
 
+                            // Pertanyaan 1
                             OutlinedTextField(
-                                value = recoveryQuestion,
-                                onValueChange = { recoveryQuestion = it },
+                                value = recoveryQuestion1,
+                                onValueChange = { recoveryQuestion1 = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                label = { Text("Pertanyaan Keamanan (Lupa PIN)") },
+                                label = { Text("Pertanyaan Keamanan 1") },
                                 singleLine = true,
                                 shape = RoundedCornerShape(14.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
@@ -1423,15 +1613,99 @@ fun FirstRunOnboardingWizardScreen(
                                     unfocusedLabelColor = CosmicTextMuted
                                 )
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             OutlinedTextField(
-                                value = recoveryAnswer,
-                                onValueChange = { recoveryAnswer = it },
+                                value = recoveryAnswer1,
+                                onValueChange = { recoveryAnswer1 = it },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("onboarding_recovery_answer_input"),
-                                label = { Text("Jawaban / Kata Kunci Pemulihan Rahasia") },
-                                placeholder = { Text("Wajib diisi untuk pemulihan lupa PIN") },
+                                label = { Text("Jawaban Pertanyaan 1") },
+                                placeholder = { Text("Jawaban 1...") },
+                                singleLine = true,
+                                shape = RoundedCornerShape(14.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = CosmicVoid,
+                                    unfocusedContainerColor = CosmicVoid,
+                                    focusedBorderColor = StarlightCyan,
+                                    unfocusedBorderColor = CosmicSurface,
+                                    focusedTextColor = CosmicTextPure,
+                                    unfocusedTextColor = CosmicTextPure,
+                                    focusedLabelColor = StarlightCyan,
+                                    unfocusedLabelColor = CosmicTextMuted
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Pertanyaan 2
+                            OutlinedTextField(
+                                value = recoveryQuestion2,
+                                onValueChange = { recoveryQuestion2 = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Pertanyaan Keamanan 2") },
+                                singleLine = true,
+                                shape = RoundedCornerShape(14.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = CosmicVoid,
+                                    unfocusedContainerColor = CosmicVoid,
+                                    focusedBorderColor = StarlightCyan,
+                                    unfocusedBorderColor = CosmicSurface,
+                                    focusedTextColor = CosmicTextPure,
+                                    unfocusedTextColor = CosmicTextPure,
+                                    focusedLabelColor = StarlightCyan,
+                                    unfocusedLabelColor = CosmicTextMuted
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            OutlinedTextField(
+                                value = recoveryAnswer2,
+                                onValueChange = { recoveryAnswer2 = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Jawaban Pertanyaan 2") },
+                                placeholder = { Text("Jawaban 2...") },
+                                singleLine = true,
+                                shape = RoundedCornerShape(14.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = CosmicVoid,
+                                    unfocusedContainerColor = CosmicVoid,
+                                    focusedBorderColor = StarlightCyan,
+                                    unfocusedBorderColor = CosmicSurface,
+                                    focusedTextColor = CosmicTextPure,
+                                    unfocusedTextColor = CosmicTextPure,
+                                    focusedLabelColor = StarlightCyan,
+                                    unfocusedLabelColor = CosmicTextMuted
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Pertanyaan 3
+                            OutlinedTextField(
+                                value = recoveryQuestion3,
+                                onValueChange = { recoveryQuestion3 = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Pertanyaan Keamanan 3") },
+                                singleLine = true,
+                                shape = RoundedCornerShape(14.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = CosmicVoid,
+                                    unfocusedContainerColor = CosmicVoid,
+                                    focusedBorderColor = StarlightCyan,
+                                    unfocusedBorderColor = CosmicSurface,
+                                    focusedTextColor = CosmicTextPure,
+                                    unfocusedTextColor = CosmicTextPure,
+                                    focusedLabelColor = StarlightCyan,
+                                    unfocusedLabelColor = CosmicTextMuted
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            OutlinedTextField(
+                                value = recoveryAnswer3,
+                                onValueChange = { recoveryAnswer3 = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Jawaban Pertanyaan 3") },
+                                placeholder = { Text("Jawaban 3...") },
                                 singleLine = true,
                                 shape = RoundedCornerShape(14.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
@@ -1577,24 +1851,7 @@ fun FirstRunOnboardingWizardScreen(
 
                                         Spacer(modifier = Modifier.height(8.dp))
 
-                                        // Fallback manual email input
-                                        OutlinedTextField(
-                                            value = googleEmail,
-                                            onValueChange = { googleEmail = it },
-                                            label = { Text("Atau Ketik Email Manual") },
-                                            placeholder = { Text("nama@gmail.com") },
-                                            singleLine = true,
-                                            modifier = Modifier.fillMaxWidth(),
-                                            shape = RoundedCornerShape(12.dp),
-                                            colors = OutlinedTextFieldDefaults.colors(
-                                                focusedContainerColor = CosmicVoid,
-                                                unfocusedContainerColor = CosmicVoid,
-                                                focusedBorderColor = StarlightCyan,
-                                                unfocusedBorderColor = CosmicSurface,
-                                                focusedTextColor = CosmicTextPure,
-                                                unfocusedTextColor = CosmicTextPure
-                                            )
-                                        )
+
                                     }
                                 }
                             }
@@ -1687,16 +1944,243 @@ fun FirstRunOnboardingWizardScreen(
 
                             Button(
                                 onClick = {
-                                    if (recoveryAnswer.isBlank()) {
-                                        errorMessage = "Jawaban pertanyaan pemulihan rahasia wajib diisi!"
+                                    if (recoveryAnswer1.isBlank() || recoveryAnswer2.isBlank() || recoveryAnswer3.isBlank()) {
+                                        errorMessage = "Ketiga jawaban pertanyaan keamanan wajib diisi untuk pemulihan!"
                                         return@Button
                                     }
+                                    errorMessage = null
+                                    currentStep = 4
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp)
+                                    .testTag("onboarding_next_to_rules_button"),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = StarlightCyan,
+                                    contentColor = CosmicVoid
+                                )
+                            ) {
+                                Text(
+                                    text = "Lanjut ke Peraturan Lanjutan →",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+                4 -> {
+                    // Step 4: Peraturan Lanjutan & Kebijakan Privasi
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(26.dp),
+                        colors = CardDefaults.cardColors(containerColor = CosmicObsidian),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CosmicBorderHairline)
+                    ) {
+                        Column(modifier = Modifier.padding(20.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = SolarGold.copy(alpha = 0.2f),
+                                    modifier = Modifier.size(38.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Shield,
+                                            contentDescription = null,
+                                            tint = SolarGold,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = "Peraturan Lanjutan & Privasi",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = CosmicTextPure
+                                    )
+                                    Text(
+                                        text = "Aturan penting untuk perlindungan brankas",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = CosmicTextMuted
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Rule 1: Stealth Mode
+                            Surface(
+                                color = CosmicSurface.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Mode Siluman (Stealth Mode)",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = CosmicTextPure
+                                        )
+                                        Text(
+                                            text = "Sembunyikan nomor brankas dari layar agar tidak ada yang tahu ruang mana yang aktif.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = CosmicTextMuted
+                                        )
+                                    }
+                                    Switch(
+                                        checked = stealthModeRule,
+                                        onCheckedChange = { stealthModeRule = it },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = StarlightCyan,
+                                            checkedTrackColor = CosmicVoid
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Rule 2: Password-Protected Export
+                            Surface(
+                                color = CosmicSurface.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Ekspor Terenkripsi Wajib Sandi (.nyx)",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = CosmicTextPure
+                                        )
+                                        Text(
+                                            text = "Setiap file keluar berformat .nyx wajib memasukkan sandi pembuat saat diimpor di perangkat lain.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = CosmicTextMuted
+                                        )
+                                    }
+                                    Switch(
+                                        checked = encryptedExportRule,
+                                        onCheckedChange = { encryptedExportRule = it },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = StarlightCyan,
+                                            checkedTrackColor = CosmicVoid
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Rule 3: Auto-Lock on Background
+                            Surface(
+                                color = CosmicSurface.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Kunci Otomatis Saat Keluar Aplikasi",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = CosmicTextPure
+                                        )
+                                        Text(
+                                            text = "Kunci brankas otomatis seketika saat aplikasi diminimize atau layar mati.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = CosmicTextMuted
+                                        )
+                                    }
+                                    Switch(
+                                        checked = autoLockRule,
+                                        onCheckedChange = { autoLockRule = it },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = StarlightCyan,
+                                            checkedTrackColor = CosmicVoid
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Rule 4: Hardware Biometric Sensor
+                            Surface(
+                                color = CosmicSurface.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Sensor Sidik Jari Perangkat",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = CosmicTextPure
+                                        )
+                                        Text(
+                                            text = "Pindai fisik sidik jari untuk login kilat tanpa menunggu.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = CosmicTextMuted
+                                        )
+                                    }
+                                    Switch(
+                                        checked = biometricEnabled,
+                                        onCheckedChange = { biometricEnabled = it },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = StarlightCyan,
+                                            checkedTrackColor = CosmicVoid
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            Button(
+                                onClick = {
                                     onCompleteSetup(
                                         v1Pin1, v1Pin2, v1Pin3,
                                         v2Pin1, v2Pin2, v2Pin3,
                                         biometricEnabled,
-                                        recoveryQuestion.ifBlank { "Apa nama planet atau bintang rahasia Anda?" },
-                                        recoveryAnswer.trim(),
+                                        recoveryQuestion1.ifBlank { "Apa nama kota kelahiran Anda?" },
+                                        recoveryAnswer1.trim(),
+                                        recoveryQuestion2.ifBlank { "Apa nama hewan peliharaan pertama Anda?" },
+                                        recoveryAnswer2.trim(),
+                                        recoveryQuestion3.ifBlank { "Apa makanan favorit masa kecil Anda?" },
+                                        recoveryAnswer3.trim(),
                                         googleEmail.trim(),
                                         googleDisplayName.trim()
                                     )
@@ -1704,19 +2188,22 @@ fun FirstRunOnboardingWizardScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(52.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(CosmicGradientCta)
                                     .testTag("onboarding_finish_button"),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = StarlightCyan,
-                                    contentColor = CosmicVoid
+                                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    contentColor = CosmicTextPure
                                 )
                             ) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null)
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = CosmicTextPure)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Simpan & Buka Brankas Sekarang",
+                                    text = "Simpan & Masuk ke Ruang Rahasia",
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    color = CosmicTextPure
                                 )
                             }
                         }

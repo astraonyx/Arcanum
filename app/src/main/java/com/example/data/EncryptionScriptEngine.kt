@@ -3,6 +3,8 @@ package com.example.data
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -417,5 +419,144 @@ object EncryptionScriptEngine {
         val commitHex = commit.joinToString("") { "%02X".format(it) }
         val shortChecksum = "NYX2::0x${commitHex.take(4)}..${commitHex.takeLast(4)}"
         return Pair(hexPreview, shortChecksum)
+    }
+}
+
+/**
+ * Paket Ekspor Mandiri .nyx Terproteksi Kata Sandi:
+ * Mengenkripsi berkas dengan AES-256-GCM + key derivation SHA-256 dari kata sandi pembuat.
+ * Berkas tetap berformat .nyx. Siapapun yang mengimpor berkas ini di perangkat lain
+ * wajib memasukkan kata sandi yang dibuat pengirim untuk membukanya.
+ */
+object NyxPasswordExportPackage {
+    const val HEADER_MAGIC = "NYX2_EXPORT_PKG\n"
+
+    fun isNyxExportPackage(headerBytes: ByteArray): Boolean {
+        val magicBytes = HEADER_MAGIC.toByteArray(Charsets.UTF_8)
+        if (headerBytes.size < magicBytes.size) return false
+        for (i in magicBytes.indices) {
+            if (headerBytes[i] != magicBytes[i]) return false
+        }
+        return true
+    }
+
+    fun deriveKey(password: String, salt: ByteArray): ByteArray {
+        val digest = MessageDigest.getInstance("SHA-256")
+        var key = digest.digest(salt + password.toByteArray(Charsets.UTF_8))
+        for (i in 0 until 5000) {
+            digest.update(key)
+            digest.update(salt)
+            key = digest.digest()
+        }
+        return key
+    }
+
+    fun exportToStream(
+        plainBytes: ByteArray,
+        originalName: String,
+        originalExtension: String,
+        category: String,
+        password: String,
+        outStream: OutputStream
+    ) {
+        val random = SecureRandom()
+        val salt = ByteArray(16).apply { random.nextBytes(this) }
+        val iv = ByteArray(12).apply { random.nextBytes(this) }
+        val key = deriveKey(password, salt)
+
+        // Metadata JSON
+        val meta = """{"name":"$originalName","ext":"$originalExtension","cat":"$category"}"""
+        val metaBytes = meta.toByteArray(Charsets.UTF_8)
+        val payload = ByteBuffer.allocate(4 + metaBytes.size + plainBytes.size)
+            .putInt(metaBytes.size)
+            .put(metaBytes)
+            .put(plainBytes)
+            .array()
+
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
+        val magic = HEADER_MAGIC.toByteArray(Charsets.UTF_8)
+        cipher.updateAAD(magic)
+        val ciphertext = cipher.doFinal(payload)
+
+        outStream.write(magic)
+        outStream.write(salt)
+        outStream.write(iv)
+        outStream.write(ciphertext)
+        outStream.flush()
+    }
+
+    data class DecryptedExportResult(
+        val originalName: String,
+        val originalExtension: String,
+        val category: String,
+        val plainBytes: ByteArray
+    )
+
+    fun decryptFromStream(
+        inputStream: InputStream,
+        password: String
+    ): DecryptedExportResult {
+        val magic = HEADER_MAGIC.toByteArray(Charsets.UTF_8)
+        val header = ByteArray(magic.size)
+        var totalRead = 0
+        while (totalRead < magic.size) {
+            val r = inputStream.read(header, totalRead, magic.size - totalRead)
+            if (r == -1) break
+            totalRead += r
+        }
+        if (totalRead != magic.size || !isNyxExportPackage(header)) {
+            throw IllegalArgumentException("Berkas bukan paket ekspor NYX2 yang valid.")
+        }
+
+        val salt = ByteArray(16)
+        var saltRead = 0
+        while (saltRead < 16) {
+            val r = inputStream.read(salt, saltRead, 16 - saltRead)
+            if (r == -1) break
+            saltRead += r
+        }
+        if (saltRead != 16) throw IllegalArgumentException("Header berkas rusak (salt tidak lengkap).")
+
+        val iv = ByteArray(12)
+        var ivRead = 0
+        while (ivRead < 12) {
+            val r = inputStream.read(iv, ivRead, 12 - ivRead)
+            if (r == -1) break
+            ivRead += r
+        }
+        if (ivRead != 12) throw IllegalArgumentException("Header berkas rusak (IV tidak lengkap).")
+
+        val ciphertext = inputStream.readBytes()
+        val key = deriveKey(password, salt)
+
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
+        cipher.updateAAD(magic)
+        val plainPayload = cipher.doFinal(ciphertext)
+
+        val buf = ByteBuffer.wrap(plainPayload)
+        val metaLen = buf.int
+        val metaBytes = ByteArray(metaLen)
+        buf.get(metaBytes)
+        val metaStr = String(metaBytes, Charsets.UTF_8)
+
+        val nameRegex = """"name":"([^"]+)"""".toRegex()
+        val extRegex = """"ext":"([^"]+)"""".toRegex()
+        val catRegex = """"cat":"([^"]+)"""".toRegex()
+
+        val originalName = nameRegex.find(metaStr)?.groupValues?.get(1) ?: "Imported_File"
+        val originalExt = extRegex.find(metaStr)?.groupValues?.get(1) ?: "bin"
+        val category = catRegex.find(metaStr)?.groupValues?.get(1) ?: "DOCUMENT"
+
+        val plainBytes = ByteArray(buf.remaining())
+        buf.get(plainBytes)
+
+        return DecryptedExportResult(
+            originalName = originalName,
+            originalExtension = originalExt,
+            category = category,
+            plainBytes = plainBytes
+        )
     }
 }

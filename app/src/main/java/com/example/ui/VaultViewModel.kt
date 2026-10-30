@@ -19,6 +19,7 @@ import com.example.data.VaultRepository
 import com.example.data.ZipPreEncryptionScannerEngine
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,9 +43,10 @@ enum class AuthStage(val layerNumber: Int, val title: String) {
 enum class VaultTab {
     DASHBOARD,
     FILES,
+    MEDIA_PLAYER,
+    PHOTO_GALLERY,
     MORI_DOWNLOADER,
     ZIP_SCANNER,
-    MEDIA_PLAYER,
     SCRIPT_ENGINE
 }
 
@@ -77,6 +79,17 @@ data class CryptoPinModalState(
 data class BiometricExportModalState(
     val item: VaultItemEntity,
     val isShareIntent: Boolean, // true = Share via FileProvider, false = Export/Save to device
+    val errorMessage: String? = null
+)
+
+data class ExportPasswordPromptState(
+    val item: VaultItemEntity,
+    val isShareIntent: Boolean
+)
+
+data class ImportPasswordPromptState(
+    val uri: Uri,
+    val fileName: String,
     val errorMessage: String? = null
 )
 
@@ -153,7 +166,14 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     private val _biometricExportModalState = MutableStateFlow<BiometricExportModalState?>(null)
     val biometricExportModalState: StateFlow<BiometricExportModalState?> = _biometricExportModalState.asStateFlow()
 
+    private val _exportPasswordPromptState = MutableStateFlow<ExportPasswordPromptState?>(null)
+    val exportPasswordPromptState: StateFlow<ExportPasswordPromptState?> = _exportPasswordPromptState.asStateFlow()
+
+    private val _importPasswordPromptState = MutableStateFlow<ImportPasswordPromptState?>(null)
+    val importPasswordPromptState: StateFlow<ImportPasswordPromptState?> = _importPasswordPromptState.asStateFlow()
+
     private var pendingExportTargetItem: VaultItemEntity? = null
+    private var pendingExportPassword: String = ""
 
     private val _activeTab = MutableStateFlow(VaultTab.DASHBOARD)
     val activeTab: StateFlow<VaultTab> = _activeTab.asStateFlow()
@@ -260,8 +280,12 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         v2p2: String,
         v2p3: String,
         biometricEnabled: Boolean,
-        recoveryQuestion: String = "Apa nama planet atau bintang rahasia Anda?",
+        recoveryQuestion: String = "Apa nama kota kelahiran Anda?",
         recoveryAnswer: String = "",
+        recoveryQuestion2: String = "Apa nama hewan peliharaan pertama Anda?",
+        recoveryAnswer2: String = "",
+        recoveryQuestion3: String = "Apa makanan favorit masa kecil Anda?",
+        recoveryAnswer3: String = "",
         googleEmail: String = "",
         googleDisplayName: String = ""
     ) {
@@ -276,6 +300,10 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                 biometricEnabled = biometricEnabled,
                 recoveryQuestion = recoveryQuestion,
                 recoveryAnswer = recoveryAnswer,
+                recoveryQuestion2 = recoveryQuestion2,
+                recoveryAnswer2 = recoveryAnswer2,
+                recoveryQuestion3 = recoveryQuestion3,
+                recoveryAnswer3 = recoveryAnswer3,
                 googleEmail = googleEmail,
                 googleDisplayName = googleDisplayName
             )
@@ -698,6 +726,36 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     fun importUrisFromPicker(uris: List<Uri>) {
         if (uris.isEmpty()) return
         val wasInScannerTab = _activeTab.value == VaultTab.ZIP_SCANNER
+
+        val nyxUri = uris.firstOrNull { uri ->
+            val name = repository.queryDisplayNameFromUri(uri).lowercase()
+            name.endsWith(".nyx")
+        }
+        if (nyxUri != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val isProtected = repository.isPasswordProtectedNyxUri(nyxUri)
+                if (isProtected) {
+                    val name = repository.queryDisplayNameFromUri(nyxUri)
+                    withContext(Dispatchers.Main) {
+                        _importPasswordPromptState.value = ImportPasswordPromptState(
+                            uri = nyxUri,
+                            fileName = name
+                        )
+                    }
+                    return@launch
+                } else {
+                    withContext(Dispatchers.Main) {
+                        executeNormalUriImport(uris, wasInScannerTab)
+                    }
+                }
+            }
+            return
+        }
+
+        executeNormalUriImport(uris, wasInScannerTab)
+    }
+
+    private fun executeNormalUriImport(uris: List<Uri>, wasInScannerTab: Boolean) {
         _activeTab.value = VaultTab.ZIP_SCANNER
         _zipScannerState.value = ZipScannerUiState(
             isScanning = true,
@@ -875,10 +933,17 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun saveRecoveryCredentials(question: String, answer: String) {
+    fun saveRecoveryCredentials(
+        question: String,
+        answer: String,
+        question2: String = "",
+        answer2: String = "",
+        question3: String = "",
+        answer3: String = ""
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.updateRecoveryCredentials(question, answer)
-            postBanner("Pertanyaan & Kunci Pemulihan Lupa Sandi berhasil diperbarui")
+            repository.updateRecoveryCredentials(question, answer, question2, answer2, question3, answer3)
+            postBanner("3 Pertanyaan & Kunci Pemulihan Lupa Sandi berhasil diperbarui")
         }
     }
 
@@ -927,56 +992,98 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         _biometricExportModalState.value = null
     }
 
-    fun onBiometricExportReAuthenticated(
-        onShareFileReady: (java.io.File, String) -> Unit,
-        onLaunchSystemSaveAs: (String, String) -> Unit
-    ) {
+    fun onBiometricExportReAuthenticated() {
         val modal = _biometricExportModalState.value ?: return
         val item = modal.item
         val isShare = modal.isShareIntent
         _biometricExportModalState.value = null
 
-        viewModelScope.launch(Dispatchers.IO) {
-            val decryptedFile = repository.prepareDecryptedFileForShareOrExport(item)
-            val mimeType = repository.resolveMimeType(item.extension)
-            if (decryptedFile != null && decryptedFile.exists()) {
-                // Simpan salinan ekspor otomatis di folder unduhan aplikasi
-                try {
-                    val appExportDir = java.io.File(
-                        getApplication<Application>().getExternalFilesDir(null),
-                        "TrantorVault_Exports"
-                    ).apply { if (!exists()) mkdirs() }
-                    val localExportCopy = java.io.File(appExportDir, "${item.name}.${item.extension}")
-                    decryptedFile.copyTo(localExportCopy, overwrite = true)
-                } catch (_: Exception) {
-                }
+        // Tampilkan dialog minta kata sandi untuk mengenkripsi paket .nyx ekspor
+        _exportPasswordPromptState.value = ExportPasswordPromptState(
+            item = item,
+            isShareIntent = isShare
+        )
+    }
 
-                kotlinx.coroutines.withContext(Dispatchers.Main) {
-                    if (isShare) {
-                        onShareFileReady(decryptedFile, mimeType)
-                        postBanner("Biometrik Terverifikasi: Membagikan \"${item.name}.${item.extension}\"")
-                    } else {
-                        pendingExportTargetItem = item
-                        onLaunchSystemSaveAs("${item.name}.${item.extension}", mimeType)
-                        postBanner("Biometrik Terverifikasi: Pilih lokasi simpan untuk \"${item.name}.${item.extension}\"")
+    fun dismissExportPasswordModal() {
+        _exportPasswordPromptState.value = null
+    }
+
+    fun confirmExportWithPassword(
+        password: String,
+        onShareFileReady: (java.io.File, String) -> Unit,
+        onLaunchSystemSaveAs: (String, String) -> Unit
+    ) {
+        val state = _exportPasswordPromptState.value ?: return
+        val item = state.item
+        val isShare = state.isShareIntent
+        _exportPasswordPromptState.value = null
+        pendingExportPassword = password
+        pendingExportTargetItem = item
+
+        viewModelScope.launch(Dispatchers.IO) {
+            if (isShare) {
+                val nyxFile = repository.exportVaultItemAsPasswordProtectedNyxFile(item, password)
+                if (nyxFile != null && nyxFile.exists()) {
+                    withContext(Dispatchers.Main) {
+                        onShareFileReady(nyxFile, "application/octet-stream")
+                        postBanner("Membagikan paket terproteksi: ${item.name}.nyx")
                     }
+                } else {
+                    postBanner("Gagal membuat paket ekspor .nyx")
                 }
             } else {
-                postBanner("Gagal menyiapkan file ekspor untuk \"${item.name}.${item.extension}\"")
+                withContext(Dispatchers.Main) {
+                    onLaunchSystemSaveAs("${item.name}.nyx", "application/octet-stream")
+                    postBanner("Pilih lokasi simpan untuk \"${item.name}.nyx\"")
+                }
             }
         }
     }
 
     fun completeExportToDocumentUri(targetUri: Uri?) {
         val item = pendingExportTargetItem
+        val password = pendingExportPassword
         pendingExportTargetItem = null
+        pendingExportPassword = ""
         if (targetUri == null || item == null) return
         viewModelScope.launch(Dispatchers.IO) {
-            val ok = repository.exportVaultItemToUri(item, targetUri)
-            if (ok) {
-                postBanner("Berhasil mengekspor \"${item.name}.${item.extension}\" ke penyimpanan perangkat!")
+            val ok = if (password.isNotBlank()) {
+                repository.exportVaultItemAsPasswordProtectedNyxToUri(item, password, targetUri)
             } else {
-                postBanner("Gagal menyimpan file ekspor ke lokasi tujuan.")
+                repository.exportVaultItemToUri(item, targetUri)
+            }
+            if (ok) {
+                postBanner("Berhasil mengekspor \"${item.name}.nyx\" terproteksi sandi ke perangkat!")
+            } else {
+                postBanner("Gagal menyimpan berkas ekspor .nyx.")
+            }
+        }
+    }
+
+    fun dismissImportPasswordModal() {
+        _importPasswordPromptState.value = null
+    }
+
+    fun confirmImportPassword(password: String) {
+        val prompt = _importPasswordPromptState.value ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val entity = repository.importPasswordProtectedNyxUri(
+                    uri = prompt.uri,
+                    password = password,
+                    vaultId = _activeVaultId.value
+                )
+                withContext(Dispatchers.Main) {
+                    _importPasswordPromptState.value = null
+                    postBanner("Berhasil mendekripsi & mengimpor \"${entity.name}.${entity.extension}\" ke brankas!")
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _importPasswordPromptState.value = prompt.copy(
+                        errorMessage = "Kata sandi salah! Berkas .nyx tidak dapat didekripsi."
+                    )
+                }
             }
         }
     }

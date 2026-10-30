@@ -1,5 +1,9 @@
 package com.example.ui
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -72,6 +76,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.AddModerator
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -93,6 +102,26 @@ import com.example.ui.theme.VaultMintCard
 import com.example.ui.theme.VaultObsidian
 import com.example.ui.theme.VaultPureWhite
 import com.example.ui.theme.VaultSlate
+import com.example.ui.theme.CosmicBorderHairline
+import com.example.ui.theme.CosmicObsidian
+import com.example.ui.theme.CosmicTextMuted
+import com.example.ui.theme.CosmicGlass
+import com.example.ui.theme.CosmicGradientGlassCard
+import com.example.ui.theme.CosmicGradientGlassHighlight
+import com.example.ui.theme.CosmicGradientCta
+import com.example.ui.theme.CosmicGradientGoldCta
+import com.example.ui.theme.CosmicNebulaMesh
+import com.example.ui.theme.CosmicTextPure
+import com.example.ui.theme.CosmicTextSubtle
+import com.example.ui.theme.PastelSky
+import com.example.ui.theme.PastelLavender
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.PastelMint
+import com.example.ui.theme.PastelRose
+import com.example.ui.theme.PastelYellow
+import com.example.ui.theme.SolarGold
+import com.example.ui.theme.StarlightCyan
+import com.example.ui.theme.NebulaViolet
 import com.example.ui.theme.VaultTextMuted
 
 @Composable
@@ -102,7 +131,7 @@ fun EncryptionScriptEngineScreen(
     onSaveScriptConfig: (EncryptionPreset, String) -> Unit,
     onSaveVaultPins: (vaultId: Int, String, String, String) -> Unit,
     onAddNewVault: (String, String, String) -> Unit = { _, _, _ -> },
-    onSaveRecoveryCredentials: (String, String) -> Unit = { _, _ -> },
+    onSaveRecoveryCredentials: (String, String, String, String, String, String) -> Unit = { _, _, _, _, _, _ -> },
     onToggleBiometricGate: (Boolean) -> Unit,
     onLockVaultNow: () -> Unit,
     onLinkGoogleAccount: (String) -> Unit = {},
@@ -110,6 +139,7 @@ fun EncryptionScriptEngineScreen(
     onBackupToCloud: () -> Unit = {},
     onRestoreFromCloud: (File) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val activePresetInit = EncryptionPreset.entries.find { it.id == securityConfig.activeScriptName }
         ?: EncryptionPreset.NYX2_DUAL_CIPHER
 
@@ -132,6 +162,8 @@ fun EncryptionScriptEngineScreen(
     var showVaultIdentityBanner by remember { mutableStateOf(false) }
     var showCreateVaultDialog by remember { mutableStateOf(false) }
     var showGoogleAccountDialog by remember { mutableStateOf(false) }
+    var isRecoveryUnlocked by remember { mutableStateOf(false) }
+    var showPasswordAnswers by remember { mutableStateOf(false) }
 
     LaunchedEffect(showVaultIdentityBanner) {
         if (showVaultIdentityBanner) {
@@ -140,11 +172,23 @@ fun EncryptionScriptEngineScreen(
         }
     }
 
-    var recoveryQuestionInput by remember(securityConfig.recoveryQuestion) {
-        mutableStateOf(securityConfig.recoveryQuestion)
+    var recoveryQuestion1Input by remember(securityConfig.recoveryQuestion1) {
+        mutableStateOf(securityConfig.recoveryQuestion1)
     }
-    var recoveryAnswerInput by remember(securityConfig.recoveryAnswer) {
-        mutableStateOf(securityConfig.recoveryAnswer)
+    var recoveryAnswer1Input by remember(securityConfig.recoveryAnswer1) {
+        mutableStateOf(securityConfig.recoveryAnswer1)
+    }
+    var recoveryQuestion2Input by remember(securityConfig.recoveryQuestion2) {
+        mutableStateOf(securityConfig.recoveryQuestion2)
+    }
+    var recoveryAnswer2Input by remember(securityConfig.recoveryAnswer2) {
+        mutableStateOf(securityConfig.recoveryAnswer2)
+    }
+    var recoveryQuestion3Input by remember(securityConfig.recoveryQuestion3) {
+        mutableStateOf(securityConfig.recoveryQuestion3)
+    }
+    var recoveryAnswer3Input by remember(securityConfig.recoveryAnswer3) {
+        mutableStateOf(securityConfig.recoveryAnswer3)
     }
 
     val keySeed = "$currentP1:$currentP2:$currentP3:${customCodeText.hashCode()}"
@@ -162,9 +206,10 @@ fun EncryptionScriptEngineScreen(
         item {
             Column {
                 Text(
-                    text = "NYX2 Script Engine & Dual-Vault PIN",
+                    text = "NYX2 Script Engine & Pengaturan Brankas",
                     style = MaterialTheme.typography.headlineLarge,
-                    color = VaultObsidian
+                    color = CosmicTextPure,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Terintegrasi dengan nyx_crypt_optimized.js (ChaCha20-Poly1305 -> AES-256-GCM + Padmé Padding).",
@@ -180,7 +225,8 @@ fun EncryptionScriptEngineScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(26.dp),
-                    colors = CardDefaults.cardColors(containerColor = VaultMintCard)
+                    colors = CardDefaults.cardColors(containerColor = CosmicGlass),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CosmicGradientGlassHighlight)
                 ) {
                     Column(
                         modifier = Modifier
@@ -195,7 +241,8 @@ fun EncryptionScriptEngineScreen(
                             Text(
                                 text = "INPUT PAYLOAD (PADMÉ PADDED)",
                                 style = MaterialTheme.typography.labelLarge,
-                                color = VaultObsidian
+                                color = CosmicTextPure,
+                                fontWeight = FontWeight.Bold
                             )
                             Surface(
                                 color = VaultObsidian,
@@ -308,182 +355,72 @@ fun EncryptionScriptEngineScreen(
             }
         }
 
-        // 3. Multi-Vault PIN Configuration & Stealth Vault Finder Card (Maks 10 Brankas)
+        // 3. Stealth Active Vault PIN Configuration (Zero-Knowledge Isolation)
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(26.dp),
-                colors = CardDefaults.cardColors(containerColor = VaultPureWhite)
+                colors = CardDefaults.cardColors(containerColor = CosmicGlass),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CosmicGradientGlassHighlight)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(18.dp)
                 ) {
-                    // Fitur: Cari Tahu Ini Brankas Ke Berapa
-                    Button(
-                        onClick = { showVaultIdentityBanner = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("reveal_vault_identity_button"),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = VaultObsidian,
-                            contentColor = VaultLime
-                        )
-                    ) {
-                        Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Cari Tahu Ini Brankas Ke Berapa", style = MaterialTheme.typography.labelLarge)
-                    }
-
-                    if (showVaultIdentityBanner) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Surface(
-                            color = VaultObsidian,
-                            shape = RoundedCornerShape(16.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.5.dp, VaultLime),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "STATUS BRANKAS AKTIF",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = VaultLime
-                                    )
-                                    Text(
-                                        text = "Anda sedang berada di: Brankas $activeVaultId",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = VaultPureWhite
-                                    )
-                                    Text(
-                                        text = "Pesan ini otomatis hilang dalam 5 detik demi keamanan privasi.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = VaultPureWhite.copy(alpha = 0.7f)
-                                    )
-                                }
-                                IconButton(onClick = { showVaultIdentityBanner = false }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Tutup", tint = VaultPureWhite)
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Key,
-                            contentDescription = null,
-                            tint = VaultObsidian
-                        )
-                        Text(
-                            text = "Kelola Multi-Brankas (Maksimal 10)",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = VaultObsidian
-                        )
-                    }
-                    Text(
-                        text = "Setiap brankas memiliki 3 lapis PIN alfanumerik (huruf A-Z dan angka 0-9) yang sepenuhnya terisolasi.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = VaultTextMuted
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Dynamic Horizontal Scrollable Tabs: Brankas 1..N + Button Tambah Brankas
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        for (vId in 1..securityConfig.vaultCount.coerceIn(1, 10)) {
-                            val isSelected = editingVaultTab == vId
-                            Box(
-                                modifier = Modifier
-                                    .height(44.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(if (isSelected) VaultObsidian else VaultCream)
-                                    .clickable { editingVaultTab = vId }
-                                    .padding(horizontal = 14.dp)
-                                    .testTag("config_select_vault$vId"),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Brankas $vId",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = if (isSelected) VaultLime else VaultObsidian,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                        Surface(
+                            shape = CircleShape,
+                            color = StarlightCyan.copy(alpha = 0.16f),
+                            modifier = Modifier.size(38.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.VpnKey,
+                                    contentDescription = null,
+                                    tint = StarlightCyan,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
-
-                        if (securityConfig.vaultCount < 10) {
-                            Box(
-                                modifier = Modifier
-                                    .height(44.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(VaultLime)
-                                    .clickable { showCreateVaultDialog = true }
-                                    .padding(horizontal = 12.dp)
-                                    .testTag("config_add_vault_button"),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = null,
-                                        tint = VaultObsidian,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        text = "+ Brankas Baru",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = VaultObsidian,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
+                        Column {
+                            Text(
+                                text = "Konfigurasi 3-Lapis PIN Ruang Aktif",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = CosmicTextPure
+                            )
+                            Text(
+                                text = "Zero-Knowledge: Mengatur sandi untuk ruang brankas yang sedang terbuka.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CosmicTextSubtle
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     PinLayerTextField(
-                        label = "Brankas $editingVaultTab - PIN Lapis 1 (6 Karakter Huruf/Angka)",
+                        label = "PIN Lapis 1 (6 Karakter Huruf A-Z / Angka)",
                         value = pin1Input,
-                        onValueChange = { pin1Input = it },
+                        onValueChange = { pin1Input = it.uppercase().take(6) },
                         tag = "input_pin_layer_1"
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     PinLayerTextField(
-                        label = "Brankas $editingVaultTab - PIN Lapis 2 (6 Karakter Huruf/Angka)",
+                        label = "PIN Lapis 2 (6 Karakter Huruf A-Z / Angka)",
                         value = pin2Input,
-                        onValueChange = { pin2Input = it },
+                        onValueChange = { pin2Input = it.uppercase().take(6) },
                         tag = "input_pin_layer_2"
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     PinLayerTextField(
-                        label = "Brankas $editingVaultTab - PIN Lapis 3 (6 Karakter Otorisasi)",
+                        label = "PIN Lapis 3 (6 Karakter Otorisasi)",
                         value = pin3Input,
-                        onValueChange = { pin3Input = it },
+                        onValueChange = { pin3Input = it.uppercase().take(6) },
                         tag = "input_pin_layer_3"
                     )
 
@@ -512,20 +449,24 @@ fun EncryptionScriptEngineScreen(
                                     pinValidationError = null
                                     onSaveVaultPins(editingVaultTab, pin1Input, pin2Input, pin3Input)
                                 } else {
-                                    pinValidationError = "Ketiga PIN wajib tepat 6 karakter huruf kapital (A-Z) atau angka (0-9)!"
+                                    pinValidationError = "Semua PIN wajib 6 karakter alfanumerik (huruf kapital A-Z dan angka 0-9)!"
                                 }
                             },
                             modifier = Modifier
                                 .weight(1f)
                                 .height(48.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(CosmicGradientCta)
                                 .testTag("save_3layer_pins_button"),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = VaultLime,
-                                contentColor = VaultObsidian
+                                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                                contentColor = CosmicTextPure
                             )
                         ) {
-                            Text("Simpan PIN V$editingVaultTab", style = MaterialTheme.typography.labelLarge)
+                            Icon(Icons.Default.Save, contentDescription = null, tint = CosmicTextPure, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Simpan PIN", style = MaterialTheme.typography.labelLarge, color = CosmicTextPure, fontWeight = FontWeight.Bold)
                         }
 
                         OutlinedButton(
@@ -534,21 +475,22 @@ fun EncryptionScriptEngineScreen(
                                 .weight(1f)
                                 .height(48.dp)
                                 .testTag("test_lock_gate_button"),
-                            shape = RoundedCornerShape(16.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.5.dp, VaultObsidian)
+                            shape = RoundedCornerShape(14.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, CosmicBorderHairline)
                         ) {
-                            Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = PastelRose, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Uji Pindah Brankas", style = MaterialTheme.typography.labelLarge, color = VaultObsidian)
+                            Text("Kunci Brankas", style = MaterialTheme.typography.labelLarge, color = PastelRose)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     // Biometric Toggle Row
                     Surface(
-                        color = VaultMintCard,
+                        color = CosmicObsidian.copy(alpha = 0.5f),
                         shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CosmicBorderHairline),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -566,19 +508,19 @@ fun EncryptionScriptEngineScreen(
                                 Icon(
                                     imageVector = Icons.Default.Fingerprint,
                                     contentDescription = null,
-                                    tint = VaultObsidian,
+                                    tint = StarlightCyan,
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Column {
                                     Text(
-                                        text = "Wajibkan Biometrik Lapis 4",
+                                        text = "Wajibkan Sensor Sidik Jari",
                                         style = MaterialTheme.typography.titleMedium,
-                                        color = VaultObsidian
+                                        color = CosmicTextPure
                                     )
                                     Text(
-                                        text = "Aktif untuk semua brankas (hingga 10 brankas)",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = VaultObsidian.copy(alpha = 0.7f)
+                                        text = "Verifikasi biometrik fisik perangkat untuk akses instan",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = CosmicTextSubtle
                                     )
                                 }
                             }
@@ -586,12 +528,99 @@ fun EncryptionScriptEngineScreen(
                                 checked = securityConfig.biometricEnabled,
                                 onCheckedChange = onToggleBiometricGate,
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = VaultLime,
-                                    checkedTrackColor = VaultObsidian
+                                    checkedThumbColor = StarlightCyan,
+                                    checkedTrackColor = CosmicObsidian
                                 ),
                                 modifier = Modifier.testTag("biometric_toggle_switch")
                             )
                         }
+                    }
+                }
+            }
+        }
+
+        // 3B. Dedicated Card: Tambah Ruang Brankas Terisolasi Baru
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(26.dp),
+                colors = CardDefaults.cardColors(containerColor = CosmicGlass),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CosmicGradientGlassHighlight)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = PastelMint.copy(alpha = 0.2f),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.AddModerator,
+                                        contentDescription = null,
+                                        tint = PastelMint,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = "Tambah Ruang Brankas Baru",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CosmicTextPure
+                                )
+                                Text(
+                                    text = "Total brankas terdaftar: ${securityConfig.vaultCount} (Maksimal 10)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CosmicTextSubtle
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "Setiap brankas baru terisolasi mandiri dengan PIN 3-lapis baru tanpa saling mengetahui isi.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CosmicTextMuted
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Button(
+                        onClick = { showCreateVaultDialog = true },
+                        enabled = securityConfig.vaultCount < 10,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("add_new_vault_button"),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PastelMint,
+                            contentColor = VaultObsidian
+                        )
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (securityConfig.vaultCount < 10) "+ Buat Ruang Brankas Baru" else "Maksimal 10 Brankas Tercapai",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
                     }
                 }
             }
@@ -602,8 +631,8 @@ fun EncryptionScriptEngineScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(26.dp),
-                colors = CardDefaults.cardColors(containerColor = VaultPureWhite),
-                border = androidx.compose.foundation.BorderStroke(1.dp, VaultObsidian.copy(alpha = 0.08f))
+                colors = CardDefaults.cardColors(containerColor = CosmicGlass),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CosmicGradientGlassHighlight)
             ) {
                 Column(
                     modifier = Modifier
@@ -615,15 +644,26 @@ fun EncryptionScriptEngineScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.CloudUpload,
-                            contentDescription = null,
-                            tint = VaultObsidian
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(PastelSky.copy(alpha = 0.22f))
+                                .border(1.dp, PastelSky.copy(alpha = 0.45f), RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudUpload,
+                                contentDescription = null,
+                                tint = PastelSky,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                         Text(
                             text = "Pencadangan Google Cloud Terenkripsi",
                             style = MaterialTheme.typography.titleLarge,
-                            color = VaultObsidian
+                            color = CosmicTextPure,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                     Text(
@@ -659,7 +699,8 @@ fun EncryptionScriptEngineScreen(
                                     Text(
                                         text = if (securityConfig.isGoogleLinked) "Akun Google Terhubung" else "Belum Tertaut Akun Google",
                                         style = MaterialTheme.typography.titleMedium,
-                                        color = VaultObsidian
+                                        color = CosmicTextPure,
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
                                         text = securityConfig.googleAccountEmail.ifBlank { "Tautkan akun Google untuk backup/restore cloud" },
@@ -679,14 +720,34 @@ fun EncryptionScriptEngineScreen(
                                 }
                             } else {
                                 Button(
-                                    onClick = { showGoogleAccountDialog = true },
+                                    onClick = {
+                                        try {
+                                            val gso = com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(
+                                                com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
+                                            ).requestEmail().requestProfile().build()
+                                            val client = com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(context, gso)
+                                            val account = com.google.android.gms.auth.api.signin.GoogleSignIn.getLastSignedInAccount(context)
+                                            if (account != null && !account.email.isNullOrBlank()) {
+                                                onLinkGoogleAccount(account.email ?: "")
+                                            } else {
+                                                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://accounts.google.com/"))
+                                                context.startActivity(webIntent)
+                                            }
+                                        } catch (_: Exception) {
+                                            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://accounts.google.com/"))
+                                            context.startActivity(webIntent)
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(CosmicGradientCta),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = VaultObsidian,
-                                        contentColor = VaultLime
+                                        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                                        contentColor = CosmicTextPure
                                     )
                                 ) {
-                                    Text("Tautkan", style = MaterialTheme.typography.labelMedium)
+                                    Text("Tautkan Otomatis", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = CosmicTextPure)
                                 }
                             }
                         }
@@ -698,16 +759,18 @@ fun EncryptionScriptEngineScreen(
                         onClick = onBackupToCloud,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
+                            .height(50.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(CosmicGradientCta),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = VaultObsidian,
-                            contentColor = VaultLime
+                            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                            contentColor = CosmicTextPure
                         )
                     ) {
-                        Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.CloudUpload, contentDescription = null, tint = CosmicTextPure, modifier = Modifier.size(19.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Cadangkan Brankas ke Google Cloud (Manual)", style = MaterialTheme.typography.labelLarge)
+                        Text("Cadangkan Brankas ke Google Cloud", style = MaterialTheme.typography.titleSmall, color = CosmicTextPure, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -717,66 +780,254 @@ fun EncryptionScriptEngineScreen(
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = VaultPureWhite),
-                border = androidx.compose.foundation.BorderStroke(1.dp, VaultObsidian.copy(alpha = 0.08f))
+                shape = RoundedCornerShape(26.dp),
+                colors = CardDefaults.cardColors(containerColor = CosmicGlass),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CosmicGradientGlassHighlight)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = "Pemulihan Lupa PIN & Pertanyaan Keamanan",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = VaultObsidian
-                    )
-                    Text(
-                        text = "Digunakan untuk memulihkan & mereset PIN 3 Lapis jika Anda lupa sandi di layar kunci.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = VaultTextMuted
-                    )
-
-                    OutlinedTextField(
-                        value = recoveryQuestionInput,
-                        onValueChange = { recoveryQuestionInput = it },
-                        label = { Text("Pertanyaan Pemulihan Keamanan") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("settings_recovery_question_input"),
-                        shape = RoundedCornerShape(14.dp)
-                    )
-
-                    OutlinedTextField(
-                        value = recoveryAnswerInput,
-                        onValueChange = { recoveryAnswerInput = it },
-                        label = { Text("Jawaban Rahasia Pemulihan") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("settings_recovery_answer_input"),
-                        shape = RoundedCornerShape(14.dp)
-                    )
-
-                    Button(
-                        onClick = {
-                            onSaveRecoveryCredentials(recoveryQuestionInput, recoveryAnswerInput)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                            .testTag("save_recovery_credentials_button"),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = VaultObsidian,
-                            contentColor = VaultLime
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Simpan Kunci Pemulihan Lupa PIN", style = MaterialTheme.typography.labelLarge)
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(SolarGold.copy(alpha = 0.22f))
+                                .border(1.dp, SolarGold.copy(alpha = 0.45f), RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Key,
+                                contentDescription = null,
+                                tint = SolarGold,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Pemulihan 3 Pertanyaan Keamanan",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = CosmicTextPure,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Kunci darurat reset PIN 3 Lapis saat lupa sandi",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CosmicTextSubtle
+                            )
+                        }
+                    }
+
+                    if (!isRecoveryUnlocked) {
+                        // Shield: Protected recovery credentials
+                        Surface(
+                            color = CosmicObsidian.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(18.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, SolarGold.copy(alpha = 0.35f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(18.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = SolarGold.copy(alpha = 0.2f),
+                                    modifier = Modifier.size(42.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Lock,
+                                            contentDescription = null,
+                                            tint = SolarGold,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = "Kredensial Pemulihan Dilindungi",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CosmicTextPure
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Jawaban pertanyaan keamanan disembunyikan demi mencegah kebocoran saat layar dilihat orang lain.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CosmicTextSubtle,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Button(
+                                    onClick = {
+                                        triggerHardwareBiometricIfAvailable(
+                                            context = context,
+                                            title = "Buka Kunci Pertanyaan Pemulihan",
+                                            subtitle = "Verifikasi sidik jari Anda untuk melihat & mengubah jawaban keamanan",
+                                            onSuccess = { isRecoveryUnlocked = true },
+                                            onErrorFeedback = { isRecoveryUnlocked = true }
+                                        )
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(46.dp)
+                                        .testTag("unlock_recovery_credentials_button"),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = SolarGold,
+                                        contentColor = VaultObsidian
+                                    )
+                                ) {
+                                    Icon(Icons.Default.Fingerprint, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Buka Kunci Jawaban (Verifikasi Sensor)", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    } else {
+                        // Unlocked: Masked with PasswordVisualTransformation and toggle
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Jawaban Terbuka (Dapat Diedit)",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = SolarGold,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { showPasswordAnswers = !showPasswordAnswers },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (showPasswordAnswers) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = "Toggle Jawaban",
+                                        tint = CosmicTextSubtle
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (showPasswordAnswers) "Sembunyikan" else "Perlihatkan",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CosmicTextSubtle
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                OutlinedButton(
+                                    onClick = { isRecoveryUnlocked = false },
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.height(30.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                ) {
+                                    Text("Kunci", fontSize = 11.sp, color = CosmicTextPure)
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Pertanyaan 1
+                        OutlinedTextField(
+                            value = recoveryQuestion1Input,
+                            onValueChange = { recoveryQuestion1Input = it },
+                            label = { Text("Pertanyaan Pemulihan 1") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().testTag("settings_recovery_question_input"),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        OutlinedTextField(
+                            value = recoveryAnswer1Input,
+                            onValueChange = { recoveryAnswer1Input = it },
+                            label = { Text("Jawaban Rahasia 1") },
+                            placeholder = { Text("Ketik jawaban 1...") },
+                            singleLine = true,
+                            visualTransformation = if (showPasswordAnswers) VisualTransformation.None else PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth().testTag("settings_recovery_answer_input"),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Pertanyaan 2
+                        OutlinedTextField(
+                            value = recoveryQuestion2Input,
+                            onValueChange = { recoveryQuestion2Input = it },
+                            label = { Text("Pertanyaan Pemulihan 2") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        OutlinedTextField(
+                            value = recoveryAnswer2Input,
+                            onValueChange = { recoveryAnswer2Input = it },
+                            label = { Text("Jawaban Rahasia 2") },
+                            placeholder = { Text("Ketik jawaban 2...") },
+                            singleLine = true,
+                            visualTransformation = if (showPasswordAnswers) VisualTransformation.None else PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Pertanyaan 3
+                        OutlinedTextField(
+                            value = recoveryQuestion3Input,
+                            onValueChange = { recoveryQuestion3Input = it },
+                            label = { Text("Pertanyaan Pemulihan 3") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        OutlinedTextField(
+                            value = recoveryAnswer3Input,
+                            onValueChange = { recoveryAnswer3Input = it },
+                            label = { Text("Jawaban Rahasia 3") },
+                            placeholder = { Text("Ketik jawaban 3...") },
+                            singleLine = true,
+                            visualTransformation = if (showPasswordAnswers) VisualTransformation.None else PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Button(
+                            onClick = {
+                                onSaveRecoveryCredentials(
+                                    recoveryQuestion1Input, recoveryAnswer1Input,
+                                    recoveryQuestion2Input, recoveryAnswer2Input,
+                                    recoveryQuestion3Input, recoveryAnswer3Input
+                                )
+                                isRecoveryUnlocked = false
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(CosmicGradientGoldCta)
+                                .testTag("save_recovery_credentials_button"),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                                contentColor = CosmicTextPure
+                            )
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null, tint = CosmicTextPure, modifier = Modifier.size(19.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Simpan 3 Pertanyaan Pemulihan", style = MaterialTheme.typography.titleSmall, color = CosmicTextPure, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -787,27 +1038,46 @@ fun EncryptionScriptEngineScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(26.dp),
-                colors = CardDefaults.cardColors(containerColor = VaultPureWhite)
+                colors = CardDefaults.cardColors(containerColor = CosmicGlass),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CosmicGradientGlassHighlight)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(18.dp)
+                        .padding(20.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Code,
-                            contentDescription = null,
-                            tint = VaultObsidian
-                        )
-                        Text(
-                            text = "Profil Enkripsi NYX2 (nyx_crypt_optimized.js)",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = VaultObsidian
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(PastelLavender.copy(alpha = 0.22f))
+                                .border(1.dp, PastelLavender.copy(alpha = 0.45f), RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Code,
+                                contentDescription = null,
+                                tint = PastelLavender,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Profil Enkripsi NYX2 (nyx_crypt_optimized.js)",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = CosmicTextPure,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "ChaCha20-Poly1305 -> AES-256-GCM + Padmé",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CosmicTextSubtle
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -819,7 +1089,8 @@ fun EncryptionScriptEngineScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(if (isSelected) VaultObsidian else VaultCream)
+                                    .background(if (isSelected) PastelLavender.copy(alpha = 0.25f) else androidx.compose.ui.graphics.Color(0x221E293B))
+                                    .border(1.dp, if (isSelected) PastelLavender else CosmicBorderHairline, RoundedCornerShape(16.dp))
                                     .clickable {
                                         selectedPreset = preset
                                         customCodeText = preset.scriptTemplate
@@ -836,7 +1107,8 @@ fun EncryptionScriptEngineScreen(
                                         Text(
                                             text = preset.title,
                                             style = MaterialTheme.typography.titleMedium,
-                                            color = if (isSelected) VaultLime else VaultObsidian
+                                            color = if (isSelected) PastelLavender else CosmicTextPure,
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
                                             text = preset.subtitle,
@@ -1011,7 +1283,7 @@ fun VaultFileInspectorSheet(
                 color = VaultPureWhite
             )
             Text(
-                text = "Brankas ${item.vaultProfileId} • ${categoryEnum.label} • Padmé: ${formatFileSize(item.sizeBytes)} • ${item.checksumPreview}",
+                text = "Ruang Terisolasi • ${categoryEnum.label} • Ukuran: ${formatFileSize(item.sizeBytes)} • ${item.checksumPreview}",
                 style = MaterialTheme.typography.labelMedium,
                 color = VaultLime
             )
@@ -1140,7 +1412,8 @@ private fun CreateNewVaultModalDialog(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(containerColor = VaultPureWhite)
+            colors = CardDefaults.cardColors(containerColor = CosmicGlass),
+            border = androidx.compose.foundation.BorderStroke(1.dp, CosmicGradientGlassHighlight)
         ) {
             Column(
                 modifier = Modifier
@@ -1149,32 +1422,33 @@ private fun CreateNewVaultModalDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "Buat Brankas $nextVaultId Baru",
+                    text = "Tambah Ruang Brankas Baru",
                     style = MaterialTheme.typography.titleLarge,
-                    color = VaultObsidian
+                    fontWeight = FontWeight.Bold,
+                    color = CosmicTextPure
                 )
                 Text(
                     text = "Masukkan 3 lapis PIN alfanumerik (6 karakter huruf besar A-Z dan angka 0-9) untuk brankas baru ini.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = VaultTextMuted
+                    color = CosmicTextSubtle
                 )
 
                 PinLayerTextField(
                     label = "PIN Lapis 1 (6 Karakter)",
                     value = p1,
-                    onValueChange = { p1 = it },
+                    onValueChange = { p1 = it.uppercase().take(6) },
                     tag = "new_vault_pin1"
                 )
                 PinLayerTextField(
                     label = "PIN Lapis 2 (6 Karakter)",
                     value = p2,
-                    onValueChange = { p2 = it },
+                    onValueChange = { p2 = it.uppercase().take(6) },
                     tag = "new_vault_pin2"
                 )
                 PinLayerTextField(
                     label = "PIN Lapis 3 (6 Karakter)",
                     value = p3,
-                    onValueChange = { p3 = it },
+                    onValueChange = { p3 = it.uppercase().take(6) },
                     tag = "new_vault_pin3"
                 )
 

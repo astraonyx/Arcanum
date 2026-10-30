@@ -30,8 +30,12 @@ data class SecurityConfig(
     val vaultPinsMap: Map<Int, Triple<String, String, String>> = emptyMap(),
     val biometricEnabled: Boolean = true,
     val fingerprintEnrolled: Boolean = true,
-    val recoveryQuestion: String = "Apa nama planet atau bintang rahasia Anda?",
-    val recoveryAnswer: String = "",
+    val recoveryQuestion1: String = "Apa nama kota kelahiran Anda?",
+    val recoveryAnswer1: String = "",
+    val recoveryQuestion2: String = "Apa nama hewan peliharaan pertama Anda?",
+    val recoveryAnswer2: String = "",
+    val recoveryQuestion3: String = "Apa makanan favorit masa kecil Anda?",
+    val recoveryAnswer3: String = "",
     val activeScriptName: String = EncryptionPreset.NYX2_DUAL_CIPHER.id,
     val customScriptCode: String = EncryptionPreset.NYX2_DUAL_CIPHER.scriptTemplate,
     val googleAccountEmail: String = "",
@@ -39,6 +43,8 @@ data class SecurityConfig(
     val googleAccountPhotoUrl: String = "",
     val isGoogleLinked: Boolean = false
 ) {
+    val recoveryQuestion: String get() = recoveryQuestion1
+    val recoveryAnswer: String get() = recoveryAnswer1
     fun getPinsForVault(vaultId: Int): Triple<String, String, String> {
         vaultPinsMap[vaultId]?.let { return it }
         return when (vaultId) {
@@ -105,6 +111,12 @@ class VaultRepository(
         val FINGERPRINT_ENROLLED = booleanPreferencesKey("fingerprint_enrolled")
         val RECOVERY_QUESTION = stringPreferencesKey("recovery_question")
         val RECOVERY_ANSWER = stringPreferencesKey("recovery_answer")
+        val RECOVERY_QUESTION_1 = stringPreferencesKey("recovery_question_1")
+        val RECOVERY_ANSWER_1 = stringPreferencesKey("recovery_answer_1")
+        val RECOVERY_QUESTION_2 = stringPreferencesKey("recovery_question_2")
+        val RECOVERY_ANSWER_2 = stringPreferencesKey("recovery_answer_2")
+        val RECOVERY_QUESTION_3 = stringPreferencesKey("recovery_question_3")
+        val RECOVERY_ANSWER_3 = stringPreferencesKey("recovery_answer_3")
         val ACTIVE_SCRIPT_ID = stringPreferencesKey("active_script_id")
         val CUSTOM_SCRIPT_CODE = stringPreferencesKey("custom_script_code")
         val GOOGLE_ACCOUNT_EMAIL = stringPreferencesKey("google_account_email")
@@ -144,8 +156,12 @@ class VaultRepository(
             vaultPinsMap = pinsMap,
             biometricEnabled = prefs[Keys.BIOMETRIC_ENABLED] ?: true,
             fingerprintEnrolled = prefs[Keys.FINGERPRINT_ENROLLED] ?: true,
-            recoveryQuestion = prefs[Keys.RECOVERY_QUESTION] ?: "Apa nama planet atau bintang rahasia Anda?",
-            recoveryAnswer = prefs[Keys.RECOVERY_ANSWER] ?: "",
+            recoveryQuestion1 = prefs[Keys.RECOVERY_QUESTION_1] ?: (prefs[Keys.RECOVERY_QUESTION] ?: "Apa nama kota kelahiran Anda?"),
+            recoveryAnswer1 = prefs[Keys.RECOVERY_ANSWER_1] ?: (prefs[Keys.RECOVERY_ANSWER] ?: ""),
+            recoveryQuestion2 = prefs[Keys.RECOVERY_QUESTION_2] ?: "Apa nama hewan peliharaan pertama Anda?",
+            recoveryAnswer2 = prefs[Keys.RECOVERY_ANSWER_2] ?: "",
+            recoveryQuestion3 = prefs[Keys.RECOVERY_QUESTION_3] ?: "Apa makanan favorit masa kecil Anda?",
+            recoveryAnswer3 = prefs[Keys.RECOVERY_ANSWER_3] ?: "",
             activeScriptName = prefs[Keys.ACTIVE_SCRIPT_ID] ?: EncryptionPreset.NYX2_DUAL_CIPHER.id,
             customScriptCode = prefs[Keys.CUSTOM_SCRIPT_CODE] ?: EncryptionPreset.NYX2_DUAL_CIPHER.scriptTemplate,
             googleAccountEmail = prefs[Keys.GOOGLE_ACCOUNT_EMAIL] ?: "",
@@ -163,8 +179,12 @@ class VaultRepository(
         v2p2: String,
         v2p3: String,
         biometricEnabled: Boolean,
-        recoveryQuestion: String = "Apa nama planet atau bintang rahasia Anda?",
+        recoveryQuestion: String = "Apa nama kota kelahiran Anda?",
         recoveryAnswer: String = "",
+        recoveryQuestion2: String = "Apa nama hewan peliharaan pertama Anda?",
+        recoveryAnswer2: String = "",
+        recoveryQuestion3: String = "Apa makanan favorit masa kecil Anda?",
+        recoveryAnswer3: String = "",
         googleEmail: String = "",
         googleDisplayName: String = ""
     ) {
@@ -187,8 +207,19 @@ class VaultRepository(
 
             prefs[Keys.BIOMETRIC_ENABLED] = biometricEnabled
             prefs[Keys.FINGERPRINT_ENROLLED] = true
-            prefs[Keys.RECOVERY_QUESTION] = recoveryQuestion.trim().ifBlank { "Apa nama planet atau bintang rahasia Anda?" }
+            val q1 = recoveryQuestion.trim().ifBlank { "Apa nama kota kelahiran Anda?" }
+            prefs[Keys.RECOVERY_QUESTION] = q1
+            prefs[Keys.RECOVERY_QUESTION_1] = q1
             prefs[Keys.RECOVERY_ANSWER] = recoveryAnswer.trim()
+            prefs[Keys.RECOVERY_ANSWER_1] = recoveryAnswer.trim()
+
+            val q2 = recoveryQuestion2.trim().ifBlank { "Apa nama hewan peliharaan pertama Anda?" }
+            prefs[Keys.RECOVERY_QUESTION_2] = q2
+            prefs[Keys.RECOVERY_ANSWER_2] = recoveryAnswer2.trim()
+
+            val q3 = recoveryQuestion3.trim().ifBlank { "Apa makanan favorit masa kecil Anda?" }
+            prefs[Keys.RECOVERY_QUESTION_3] = q3
+            prefs[Keys.RECOVERY_ANSWER_3] = recoveryAnswer3.trim()
 
             if (googleEmail.isNotBlank()) {
                 prefs[Keys.GOOGLE_ACCOUNT_EMAIL] = googleEmail.trim()
@@ -231,10 +262,27 @@ class VaultRepository(
         return createdId
     }
 
-    suspend fun updateRecoveryCredentials(question: String, answer: String) {
+    suspend fun updateRecoveryCredentials(
+        question: String,
+        answer: String,
+        question2: String = "",
+        answer2: String = "",
+        question3: String = "",
+        answer3: String = ""
+    ) {
         context.securityDataStore.edit { prefs ->
-            if (question.isNotBlank()) prefs[Keys.RECOVERY_QUESTION] = question.trim()
-            if (answer.isNotBlank()) prefs[Keys.RECOVERY_ANSWER] = answer.trim()
+            if (question.isNotBlank()) {
+                prefs[Keys.RECOVERY_QUESTION] = question.trim()
+                prefs[Keys.RECOVERY_QUESTION_1] = question.trim()
+            }
+            if (answer.isNotBlank()) {
+                prefs[Keys.RECOVERY_ANSWER] = answer.trim()
+                prefs[Keys.RECOVERY_ANSWER_1] = answer.trim()
+            }
+            if (question2.isNotBlank()) prefs[Keys.RECOVERY_QUESTION_2] = question2.trim()
+            if (answer2.isNotBlank()) prefs[Keys.RECOVERY_ANSWER_2] = answer2.trim()
+            if (question3.isNotBlank()) prefs[Keys.RECOVERY_QUESTION_3] = question3.trim()
+            if (answer3.isNotBlank()) prefs[Keys.RECOVERY_ANSWER_3] = answer3.trim()
         }
     }
 
@@ -319,6 +367,123 @@ class VaultRepository(
     }
 
     /**
+     * Mengekspor berkas brankas menjadi paket .nyx terproteksi kata sandi mandiri.
+     */
+    suspend fun exportVaultItemAsPasswordProtectedNyxFile(
+        item: VaultItemEntity,
+        exportPassword: String
+    ): File? {
+        val decryptedTemp = prepareDecryptedFileForShareOrExport(item) ?: return null
+        val exportDir = File(context.cacheDir, "nyx_exports").apply { if (!exists()) mkdirs() }
+        val safeBase = item.name.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
+        val outFile = File(exportDir, "$safeBase.nyx")
+        return try {
+            val plainBytes = decryptedTemp.readBytes()
+            FileOutputStream(outFile).use { fos ->
+                NyxPasswordExportPackage.exportToStream(
+                    plainBytes = plainBytes,
+                    originalName = item.name,
+                    originalExtension = item.extension,
+                    category = item.category,
+                    password = exportPassword,
+                    outStream = fos
+                )
+            }
+            if (outFile.exists()) outFile else null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    suspend fun exportVaultItemAsPasswordProtectedNyxToUri(
+        item: VaultItemEntity,
+        exportPassword: String,
+        targetUri: Uri
+    ): Boolean {
+        val decryptedTemp = prepareDecryptedFileForShareOrExport(item) ?: return false
+        return try {
+            context.contentResolver.openOutputStream(targetUri)?.use { output ->
+                NyxPasswordExportPackage.exportToStream(
+                    plainBytes = decryptedTemp.readBytes(),
+                    originalName = item.name,
+                    originalExtension = item.extension,
+                    category = item.category,
+                    password = exportPassword,
+                    outStream = output
+                )
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    suspend fun isPasswordProtectedNyxUri(uri: Uri): Boolean {
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                val magic = NyxPasswordExportPackage.HEADER_MAGIC.toByteArray(Charsets.UTF_8)
+                val buf = ByteArray(magic.size)
+                var totalRead = 0
+                while (totalRead < magic.size) {
+                    val r = input.read(buf, totalRead, magic.size - totalRead)
+                    if (r == -1) break
+                    totalRead += r
+                }
+                totalRead == magic.size && NyxPasswordExportPackage.isNyxExportPackage(buf)
+            } ?: false
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    suspend fun importPasswordProtectedNyxUri(
+        uri: Uri,
+        password: String,
+        vaultId: Int
+    ): VaultItemEntity {
+        val result = context.contentResolver.openInputStream(uri)?.use { input ->
+            NyxPasswordExportPackage.decryptFromStream(input, password)
+        } ?: throw IllegalArgumentException("Tidak dapat membaca berkas .nyx dari URI")
+
+        val cfg = securityConfigFlow.first()
+        val (pin1, pin2, pin3) = cfg.getPinsForVault(vaultId)
+        val vaultDir = getVaultStorageDir(vaultId)
+
+        val uniqueStamp = System.currentTimeMillis()
+        val safeBase = result.originalName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_").take(40)
+        val plainFile = File(vaultDir, "${uniqueStamp}_${safeBase}.${result.originalExtension}")
+        plainFile.writeBytes(result.plainBytes)
+
+        val nyxFile = File(vaultDir, "${uniqueStamp}_${safeBase}.nyx")
+        val sealMeta = EncryptionScriptEngine.sealFileToNyxContainer(
+            plainFile = plainFile,
+            nyxOutFile = nyxFile,
+            pin1 = pin1,
+            pin2 = pin2,
+            pin3 = pin3,
+            shredSource = false
+        )
+
+        val categoryStr = result.category.ifBlank { resolveCategoryFromExtension(result.originalExtension).name }
+
+        val entity = VaultItemEntity(
+            name = result.originalName,
+            extension = result.originalExtension,
+            category = categoryStr,
+            sizeBytes = result.plainBytes.size.toLong(),
+            isEncrypted = true,
+            vaultProfileId = vaultId,
+            internalPlainPath = plainFile.absolutePath,
+            internalNyxPath = nyxFile.absolutePath,
+            checksumPreview = sealMeta.second,
+            encryptedHexPreview = sealMeta.first,
+            addedAt = System.currentTimeMillis()
+        )
+        vaultDao.insertItem(entity)
+        return entity
+    }
+
+    /**
      * Mengekspor file terdekripsi ke URI tujuan (Storage Access Framework CreateDocument)
      * serta menyimpannya ke folder unduhan eksternal aplikasi.
      */
@@ -333,6 +498,19 @@ class VaultRepository(
             true
         } catch (_: Exception) {
             false
+        }
+    }
+
+    fun queryDisplayNameFromUri(uri: Uri): String {
+        return try {
+            context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (idx >= 0) cursor.getString(idx) else null
+                } else null
+            } ?: uri.lastPathSegment ?: "unknown_file"
+        } catch (_: Exception) {
+            uri.lastPathSegment ?: "unknown_file"
         }
     }
 

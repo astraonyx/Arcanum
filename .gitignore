@@ -16,3 +16,20 @@
 local.properties
 .env
 debug.keystore
+
+# Build artifacts & binary files
+*.apk
+*.zip
+*.nyx
+*.nyxpkg
+Arcanum.apk
+Arcanum_Source_Code_Clean.zip
+arcanum_codebase_for_aistudio.txt
+arcanum_galaxy_ui_showcase.png
+0*.png
+
+# Temporary scratch & tool agents
+.scratch/
+.agents/
+.aistudio/
+Mori/

@@ -9,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +35,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.DriveFileMove
@@ -526,8 +529,15 @@ private fun VideoStageAndScopedPlaylistView(
         }
     }
 
+    var videoSearchQuery by remember { mutableStateOf("") }
+
+    val displayedVideoPlaylist = remember(scopedVideoPlaylist, videoSearchQuery) {
+        if (videoSearchQuery.isBlank()) scopedVideoPlaylist
+        else scopedVideoPlaylist.filter { it.name.contains(videoSearchQuery, ignoreCase = true) }
+    }
+
     val currentVideo = mediaState.currentTrack?.takeIf { it.category == VaultCategory.VIDEO.name }
-        ?: scopedVideoPlaylist.firstOrNull()
+        ?: displayedVideoPlaylist.firstOrNull() ?: scopedVideoPlaylist.firstOrNull()
 
     if (videoItems.isEmpty()) {
         EmptyMediaCategoryState(
@@ -657,6 +667,40 @@ private fun VideoStageAndScopedPlaylistView(
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // YouTube Video Search Bar
+                    OutlinedTextField(
+                        value = videoSearchQuery,
+                        onValueChange = { videoSearchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("video_search_input"),
+                        placeholder = {
+                            Text("Cari judul video dalam brankas ini...", color = CosmicTextMuted, style = MaterialTheme.typography.bodyMedium)
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Default.Search, contentDescription = "Cari", tint = PastelSky, modifier = Modifier.size(19.dp))
+                        },
+                        trailingIcon = {
+                            if (videoSearchQuery.isNotBlank()) {
+                                IconButton(onClick = { videoSearchQuery = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Hapus", tint = CosmicTextMuted)
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = CosmicGlass,
+                            unfocusedContainerColor = CosmicGlass,
+                            focusedBorderColor = PastelSky,
+                            unfocusedBorderColor = CosmicBorderHairline,
+                            focusedTextColor = CosmicTextPure,
+                            unfocusedTextColor = CosmicTextPure
+                        )
+                    )
                 }
             }
 
@@ -688,7 +732,7 @@ private fun VideoStageAndScopedPlaylistView(
                     }
                 }
             } else {
-                itemsIndexed(scopedVideoPlaylist, key = { _, item -> item.id }) { index, item ->
+                itemsIndexed(displayedVideoPlaylist, key = { _, item -> item.id }) { index, item ->
                     val isPlayingNow = currentVideo?.id == item.id
                     ScopedVideoItemRow(
                         index = index + 1,
@@ -726,19 +770,48 @@ private fun AppleMinimalistVideoStage(
     val plainFile = remember(track.internalPlainPath) { File(track.internalPlainPath) }
     var videoDecodeError by remember(track.id, track.internalPlainPath) { mutableStateOf(false) }
 
+    var showSeekLeftHUD by remember { mutableStateOf(false) }
+    var showSeekRightHUD by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showSeekLeftHUD) {
+        if (showSeekLeftHUD) {
+            kotlinx.coroutines.delay(650)
+            showSeekLeftHUD = false
+        }
+    }
+    LaunchedEffect(showSeekRightHUD) {
+        if (showSeekRightHUD) {
+            kotlinx.coroutines.delay(650)
+            showSeekRightHUD = false
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(16f / 9f)
             .background(CosmicVoid)
-            // HOLD-TO-2X ACCELERATION GESTURE:
-            .pointerInput(track.id) {
-                awaitEachGesture {
-                    awaitFirstDown(requireUnconsumed = false)
-                    onSetHold2xSpeed(true)
-                    waitForUpOrCancellation()
-                    onSetHold2xSpeed(false)
-                }
+            // YOUTUBE-STYLE GESTURES: Double Tap Left (-5s), Double Tap Right (+5s), Hold (2x Speed)
+            .pointerInput(track.id, mediaState.currentSeconds, mediaState.totalSeconds) {
+                detectTapGestures(
+                    onDoubleTap = { offset ->
+                        val isRightSide = offset.x >= size.width / 2f
+                        if (isRightSide) {
+                            val nextSec = (mediaState.currentSeconds + 5).coerceAtMost(mediaState.totalSeconds)
+                            onSeekToSeconds(nextSec)
+                            showSeekRightHUD = true
+                        } else {
+                            val prevSec = (mediaState.currentSeconds - 5).coerceAtLeast(0)
+                            onSeekToSeconds(prevSec)
+                            showSeekLeftHUD = true
+                        }
+                    },
+                    onPress = {
+                        onSetHold2xSpeed(true)
+                        tryAwaitRelease()
+                        onSetHold2xSpeed(false)
+                    }
+                )
             }
     ) {
         if (track.isEncrypted) {
@@ -834,6 +907,47 @@ private fun AppleMinimalistVideoStage(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.VideoFile, contentDescription = null, tint = PastelSky, modifier = Modifier.size(48.dp))
+            }
+        }
+
+        // --- YOUTUBE 5S SEEK HUD OVERLAYS ---
+        if (showSeekLeftHUD) {
+            Surface(
+                color = Color.Black.copy(alpha = 0.75f),
+                shape = CircleShape,
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, PastelSky),
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 28.dp)
+                    .size(64.dp)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("⏪", fontSize = 16.sp)
+                    Text("-5s", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        if (showSeekRightHUD) {
+            Surface(
+                color = Color.Black.copy(alpha = 0.75f),
+                shape = CircleShape,
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, PastelSky),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 28.dp)
+                    .size(64.dp)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("⏩", fontSize = 16.sp)
+                    Text("+5s", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                }
             }
         }
 
@@ -982,11 +1096,11 @@ private fun ScopedVideoItemRow(
             .clickable(onClick = onClickPlay),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) CosmicSurface else CosmicObsidian
+            containerColor = if (isSelected) androidx.compose.ui.graphics.Color(0xD918233C) else CosmicGlass
         ),
         border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (isSelected) PastelSky.copy(alpha = 0.8f) else CosmicBorderHairline
+            if (isSelected) 1.5.dp else 1.dp,
+            if (isSelected) PastelSky else CosmicBorderHairline
         )
     ) {
         Row(

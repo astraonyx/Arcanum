@@ -79,8 +79,14 @@ import com.example.ui.SecurityGateScreen
 import com.example.ui.VaultDashboardAndFilesContent
 import com.example.ui.VaultFileInspectorSheet
 import com.example.ui.VaultMediaPlayerScreen
+import com.example.ui.VaultPhotoGalleryScreen
+import androidx.compose.material.icons.filled.Collections
 import com.example.ui.VaultRichMediaViewerOverlay
 import com.example.ui.VaultTab
+import com.example.ui.ExportPasswordDialog
+import com.example.ui.ImportNyxPasswordDialog
+import com.example.ui.ExportPasswordPromptState
+import com.example.ui.ImportPasswordPromptState
 import com.example.ui.VaultViewModel
 import com.example.ui.ZipScannerToolScreen
 import com.example.ui.instantTouchPress
@@ -88,6 +94,8 @@ import com.example.ui.theme.CosmicBorderHairline
 import com.example.ui.theme.CosmicObsidian
 import com.example.ui.theme.CosmicTextPure
 import com.example.ui.theme.CosmicVoid
+import com.example.ui.theme.CosmicNebulaMesh
+import androidx.compose.ui.text.font.FontWeight
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.NebulaViolet
 import com.example.ui.theme.StarlightCyan
@@ -144,6 +152,8 @@ fun TrantorVaultApp(
     val viewingMediaItem by viewModel.viewingMediaItem.collectAsStateWithLifecycle()
     val cryptoPinModalState by viewModel.cryptoPinModalState.collectAsStateWithLifecycle()
     val biometricExportModalState by viewModel.biometricExportModalState.collectAsStateWithLifecycle()
+    val exportPasswordPromptState by viewModel.exportPasswordPromptState.collectAsStateWithLifecycle()
+    val importPasswordPromptState by viewModel.importPasswordPromptState.collectAsStateWithLifecycle()
     val showForgotPinModal by viewModel.showForgotPinModal.collectAsStateWithLifecycle()
     val mediaState by viewModel.mediaState.collectAsStateWithLifecycle()
     val zipScannerState by viewModel.zipScannerState.collectAsStateWithLifecycle()
@@ -193,7 +203,12 @@ fun TrantorVaultApp(
     // 1. First-Open Onboarding & Custom PIN + Fingerprint + Recovery Setup Wizard
     if (!securityConfig.isFirstRunCompleted) {
         FirstRunOnboardingWizardScreen(
-            onCompleteSetup = viewModel::completeFirstRunOnboarding
+            onCompleteSetup = { v1p1, v1p2, v1p3, v2p1, v2p2, v2p3, bio, q1, a1, q2, a2, q3, a3, gEmail, gName ->
+                viewModel.completeFirstRunOnboarding(
+                    v1p1, v1p2, v1p3, v2p1, v2p2, v2p3, bio,
+                    q1, a1, q2, a2, q3, a3, gEmail, gName
+                )
+            }
         )
         return
     }
@@ -223,13 +238,17 @@ fun TrantorVaultApp(
 
     // Back button behavior for overlays and secondary tabs
     BackHandler(
-        enabled = biometricExportModalState != null ||
+        enabled = exportPasswordPromptState != null ||
+                importPasswordPromptState != null ||
+                biometricExportModalState != null ||
                 showForgotPinModal ||
                 viewingMediaItem != null ||
                 cryptoPinModalState != null ||
                 activeTab != VaultTab.DASHBOARD
     ) {
         when {
+            exportPasswordPromptState != null -> viewModel.dismissExportPasswordModal()
+            importPasswordPromptState != null -> viewModel.dismissImportPasswordModal()
             biometricExportModalState != null -> viewModel.dismissBiometricExportModal()
             showForgotPinModal -> viewModel.dismissForgotPinModal()
             cryptoPinModalState != null -> viewModel.dismissCryptoPinModal()
@@ -252,6 +271,7 @@ fun TrantorVaultApp(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(CosmicNebulaMesh)
                 .padding(innerPadding)
         ) {
             when (activeTab) {
@@ -351,6 +371,19 @@ fun TrantorVaultApp(
                         onOpenVirusWarningModal = viewModel::openVirusWarningModal,
                         onDismissVirusWarningModal = viewModel::dismissVirusWarningModal,
                         onClearScanReport = viewModel::clearZipScanReport
+                    )
+                }
+
+                VaultTab.PHOTO_GALLERY -> {
+                    VaultPhotoGalleryScreen(
+                        activeVaultId = activeVaultId,
+                        allItems = allItems,
+                        onOpenMediaItem = viewModel::playOrViewItem,
+                        onRequestPinToggleEncrypt = { item ->
+                            viewModel.requestToggleEncryptionWithPin(item, openAfterDecrypt = false)
+                        },
+                        onRequestExportOrShareWithBiometric = viewModel::requestExportOrShareWithBiometric,
+                        onDeleteItem = viewModel::deleteVaultItem
                     )
                 }
 
@@ -520,29 +553,50 @@ fun TrantorVaultApp(
         SecondaryBiometricReAuthDialog(
             modalState = exportState,
             onAuthenticated = {
-                viewModel.onBiometricExportReAuthenticated(
-                    onShareFileReady = { decryptedFile, mimeType ->
+                viewModel.onBiometricExportReAuthenticated()
+            },
+            onDismiss = viewModel::dismissBiometricExportModal
+        )
+    }
+
+    // Password-Protected .nyx Export Dialog (Enforces custom password on exported .nyx packages)
+    exportPasswordPromptState?.let { state: ExportPasswordPromptState ->
+        ExportPasswordDialog(
+            item = state.item,
+            onDismiss = viewModel::dismissExportPasswordModal,
+            onConfirmPassword = { password ->
+                viewModel.confirmExportWithPassword(
+                    password = password,
+                    onShareFileReady = { nyxFile, mimeType ->
                         try {
                             val authority = "${context.packageName}.fileprovider"
-                            val shareUri = FileProvider.getUriForFile(context, authority, decryptedFile)
+                            val shareUri = androidx.core.content.FileProvider.getUriForFile(context, authority, nyxFile)
                             val sendIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = mimeType
                                 putExtra(Intent.EXTRA_STREAM, shareUri)
-                                putExtra(Intent.EXTRA_SUBJECT, decryptedFile.name)
+                                putExtra(Intent.EXTRA_SUBJECT, nyxFile.name)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
-                            val chooser = Intent.createChooser(sendIntent, "Bagikan ${decryptedFile.name}")
+                            val chooser = Intent.createChooser(sendIntent, "Bagikan Berkas .nyx Terproteksi")
                             context.startActivity(chooser)
                         } catch (_: Exception) {
-                            // Handled gracefully with banner feedback in ViewModel
                         }
                     },
                     onLaunchSystemSaveAs = { suggestedFileName, _ ->
                         saveExportDocumentLauncher.launch(suggestedFileName)
                     }
                 )
-            },
-            onDismiss = viewModel::dismissBiometricExportModal
+            }
+        )
+    }
+
+    // Password-Protected .nyx Import Dialog (Prompts for creator password when importing .nyx)
+    importPasswordPromptState?.let { prompt: ImportPasswordPromptState ->
+        ImportNyxPasswordDialog(
+            fileName = prompt.fileName,
+            errorMessage = prompt.errorMessage,
+            onDismiss = viewModel::dismissImportPasswordModal,
+            onConfirmPassword = viewModel::confirmImportPassword
         )
     }
 }
@@ -562,12 +616,22 @@ private fun TrantorDockedBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(66.dp)
-                .shadow(16.dp, RoundedCornerShape(36.dp))
+                .height(68.dp)
+                .shadow(20.dp, RoundedCornerShape(36.dp))
                 .clip(RoundedCornerShape(36.dp))
                 .background(CosmicPillDock)
-                .border(1.dp, CosmicBorderHairline, RoundedCornerShape(36.dp))
-                .padding(horizontal = 10.dp),
+                .border(
+                    1.dp,
+                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                        listOf(
+                            StarlightCyan.copy(alpha = 0.55f),
+                            NebulaViolet.copy(alpha = 0.55f),
+                            PastelPeach.copy(alpha = 0.55f)
+                        )
+                    ),
+                    RoundedCornerShape(36.dp)
+                )
+                .padding(horizontal = 6.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -580,6 +644,22 @@ private fun TrantorDockedBottomBar(
                 tag = "nav_tab_dashboard"
             )
             BottomNavPillItem(
+                label = "Video",
+                icon = Icons.Default.PlayArrow,
+                selected = activeTab == VaultTab.MEDIA_PLAYER,
+                activeColor = PastelSky,
+                onClick = { onSelectTab(VaultTab.MEDIA_PLAYER) },
+                tag = "nav_tab_media_player"
+            )
+            BottomNavPillItem(
+                label = "Foto",
+                icon = Icons.Default.Collections,
+                selected = activeTab == VaultTab.PHOTO_GALLERY,
+                activeColor = PastelPeach,
+                onClick = { onSelectTab(VaultTab.PHOTO_GALLERY) },
+                tag = "nav_tab_photo_gallery"
+            )
+            BottomNavPillItem(
                 label = "Mori",
                 icon = Icons.Default.CloudDownload,
                 selected = activeTab == VaultTab.MORI_DOWNLOADER,
@@ -588,28 +668,10 @@ private fun TrantorDockedBottomBar(
                 tag = "nav_tab_mori_downloader"
             )
             BottomNavPillItem(
-                label = "Media",
-                icon = Icons.Default.PlayArrow,
-                selected = activeTab == VaultTab.MEDIA_PLAYER,
-                activeColor = PastelSky,
-                onClick = { onSelectTab(VaultTab.MEDIA_PLAYER) },
-                tag = "nav_tab_media_player"
-            )
-            if (activeTab == VaultTab.ZIP_SCANNER) {
-                BottomNavPillItem(
-                    label = "ZIP",
-                    icon = Icons.Default.FolderZip,
-                    selected = true,
-                    activeColor = PastelPeach,
-                    onClick = { onSelectTab(VaultTab.ZIP_SCANNER) },
-                    tag = "nav_tab_zip_scanner"
-                )
-            }
-            BottomNavPillItem(
-                label = "Pengaturan",
+                label = "Setelan",
                 icon = Icons.Default.Settings,
                 selected = activeTab == VaultTab.SCRIPT_ENGINE,
-                activeColor = PastelPeach,
+                activeColor = StarlightCyan,
                 onClick = { onSelectTab(VaultTab.SCRIPT_ENGINE) },
                 tag = "nav_tab_script_engine"
             )
@@ -626,16 +688,21 @@ private fun BottomNavPillItem(
     onClick: () -> Unit,
     tag: String
 ) {
-    val bg = if (selected) activeColor.copy(alpha = 0.22f) else Color.Transparent
-    val contentColor = if (selected) activeColor else CosmicTextPure.copy(alpha = 0.70f)
+    val bg = if (selected) activeColor.copy(alpha = 0.24f) else Color.Transparent
+    val contentColor = if (selected) activeColor else CosmicTextPure.copy(alpha = 0.65f)
 
     Row(
         modifier = Modifier
-            .height(42.dp)
+            .height(44.dp)
             .clip(CircleShape)
             .background(bg)
+            .then(
+                if (selected) {
+                    Modifier.border(1.dp, activeColor.copy(alpha = 0.55f), CircleShape)
+                } else Modifier
+            )
             .instantTouchPress { onClick() }
-            .padding(horizontal = if (selected) 11.dp else 8.dp)
+            .padding(horizontal = if (selected) 12.dp else 9.dp)
             .testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
@@ -644,14 +711,15 @@ private fun BottomNavPillItem(
             imageVector = icon,
             contentDescription = label,
             tint = contentColor,
-            modifier = Modifier.size(19.dp)
+            modifier = Modifier.size(20.dp)
         )
         if (selected) {
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(5.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
-                color = contentColor
+                color = contentColor,
+                fontWeight = FontWeight.Bold
             )
         }
     }

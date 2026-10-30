@@ -88,6 +88,23 @@ import com.example.ui.theme.VaultLime
 import com.example.ui.theme.VaultMintCard
 import com.example.ui.theme.VaultObsidian
 import com.example.ui.theme.VaultPureWhite
+import com.example.ui.theme.CosmicBorderHairline
+import com.example.ui.theme.CosmicGlass
+import com.example.ui.theme.CosmicGradientGlassCard
+import com.example.ui.theme.CosmicGradientGlassHighlight
+import com.example.ui.theme.CosmicGradientCta
+import com.example.ui.theme.CosmicNebulaMesh
+import com.example.ui.theme.CosmicTextPure
+import com.example.ui.theme.CosmicTextSubtle
+import com.example.ui.theme.PastelSky
+import com.example.ui.theme.PastelLavender
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.PastelMint
+import com.example.ui.theme.PastelRose
+import com.example.ui.theme.PastelYellow
+import com.example.ui.theme.SolarGold
+import com.example.ui.theme.StarlightCyan
+import com.example.ui.theme.NebulaViolet
 import com.example.ui.theme.VaultTextMuted
 
 data class MoriDownloaderUiState(
@@ -172,25 +189,27 @@ fun MoriDownloaderScreen(
                         Text(
                             text = "Mori Media Grabber",
                             style = MaterialTheme.typography.headlineMedium,
-                            color = VaultObsidian
+                            color = CosmicTextPure,
+                            fontWeight = FontWeight.Bold
                         )
                         Surface(
-                            color = VaultLime,
-                            shape = RoundedCornerShape(50)
+                            color = StarlightCyan.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(50),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, StarlightCyan.copy(alpha = 0.5f))
                         ) {
                             Text(
                                 text = "16 PLATFORM",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = VaultObsidian,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                color = StarlightCyan,
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
                             )
                         }
                     }
                     Text(
                         text = "Client-Side Downloader Tanpa Watermark -> Ruang Rahasia",
                         style = MaterialTheme.typography.labelMedium,
-                        color = VaultTextMuted
+                        color = CosmicTextSubtle
                     )
                 }
 
@@ -299,9 +318,9 @@ fun MoriDownloaderScreen(
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = VaultPureWhite),
-                border = androidx.compose.foundation.BorderStroke(1.dp, VaultObsidian.copy(alpha = 0.08f))
+                shape = RoundedCornerShape(26.dp),
+                colors = CardDefaults.cardColors(containerColor = CosmicGlass),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CosmicGradientGlassHighlight)
             ) {
                 Column(
                     modifier = Modifier
@@ -334,12 +353,14 @@ fun MoriDownloaderScreen(
                                 text = detectedPlatform.displayName,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = VaultObsidian
+                                color = CosmicTextPure
                             )
                         }
 
                         // 1-Tap Paste from Clipboard Button
                         Surface(
+                            color = PastelSky.copy(alpha = 0.18f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, PastelSky.copy(alpha = 0.5f)),
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
                                 .instantTouchPress {
@@ -357,8 +378,7 @@ fun MoriDownloaderScreen(
                                     } catch (_: Exception) {
                                     }
                                 }
-                                .testTag("mori_paste_clipboard_button"),
-                            color = VaultCream
+                                .testTag("mori_paste_clipboard_button")
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),

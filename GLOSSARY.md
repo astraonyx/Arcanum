@@ -14,6 +14,34 @@ _Avoid_: Trantor Vault, NyxApp, separate apps.
 The 4-legged winged celestial dragon mascot featuring shifting galaxy gradients and dynamic emotional states that guides and reacts to user actions throughout the app.
 _Avoid_: Nyx Duo-Owl, owl mascot, bird.
 
+**Kawaii Folder Companion**:
+The golden squircle folder companion (Mascot Model 3) featuring large glossy anime eyes with double catchlights, animated blink cycles, soft pink blush cheeks, and responsive squish-and-stretch touch physics.
+_Avoid_: static raster icon, plain folder graphic.
+
+**Dedicated Photo Gallery**:
+A dedicated primary bottom navigation tab providing high-density squircle photo grid exploration, multi-touch pinch-to-zoom, and chronological album scoping isolated per vault.
+_Avoid_: mixed video-photo stream, burying photos under file lists.
+
+**Isolated Vault Settings**:
+A zero-knowledge settings architecture where unlocking a vault only reveals that specific vault's local configurations, strictly concealing and encrypting other vaults' credentials, PINs, and existence.
+_Avoid_: global settings showing all vault PINs, multi-vault master passwords exposed.
+
+**YouTube-Style Video Theater**:
+An Apple-meets-YouTube docked video player featuring double-tap 5-second seek ripples (`⏪ -5s`, `⏩ +5s`), vertical swipe brightness/volume gestures, in-vault video search bar, and related video cards scoped to the active folder.
+_Avoid_: basic native controls, plain unstyled video view.
+
+**High-Throughput Recursive Unpack Engine**:
+A streaming archive decompression pipeline that rapidly scans directory tables without buffer exhaustion, automatically expanding nested ZIPs bounded by total entry count (max 2,500 entries) rather than arbitrary folder depth.
+_Avoid_: rigid depth limits, memory-exhausting full unzips.
+
+**Recursive Unzip Engine**:
+An automated cryptographic extraction pipeline that recursively scans and unpacks nested archive files (ZIP inside ZIP) up to a safe depth limit (5 levels), freeing all nested media into the encrypted vault without manual multi-step unzipping.
+_Avoid_: single-level zip extract, manual nested extraction.
+
+**Video Theater**:
+An Apple Minimalist docked video player featuring vertical gesture sliders for brightness and volume, double-tap 10s seek, hold-to-2x speed escalation, and a slide-out playlist drawer locked strictly to the active folder.
+_Avoid_: unconstrained video lists, cross-folder media bleed.
+
 **Neon Dragon Folder**:
 The official application icon and brand insignia depicting a glowing celestial dragon spiraling around a smiling rounded file folder across a planetary orbit.
 _Avoid_: generic lock icon, plain folder icon.

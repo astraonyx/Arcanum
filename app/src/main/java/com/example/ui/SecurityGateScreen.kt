@@ -101,6 +101,21 @@ import com.example.ui.theme.VaultMintCard
 import com.example.ui.theme.VaultObsidian
 import com.example.ui.theme.VaultPureWhite
 import com.example.ui.theme.VaultSlate
+import androidx.compose.foundation.layout.wrapContentWidth
+import com.example.ui.theme.CosmicBorderHairline
+import com.example.ui.theme.CosmicGlass
+import com.example.ui.theme.CosmicGradientGlassCard
+import com.example.ui.theme.CosmicGradientGlassHighlight
+import com.example.ui.theme.CosmicGradientCta
+import com.example.ui.theme.CosmicNebulaMesh
+import com.example.ui.theme.CosmicTextPure
+import com.example.ui.theme.PastelSky
+import com.example.ui.theme.PastelMint
+import com.example.ui.theme.PastelRose
+import com.example.ui.theme.PastelLavender
+import com.example.ui.theme.SolarGold
+import com.example.ui.theme.StarlightCyan
+import com.example.ui.theme.NebulaViolet
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -189,7 +204,7 @@ fun SecurityGateScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(VaultObsidian)
+            .background(CosmicNebulaMesh)
             .windowInsetsPadding(WindowInsets.safeDrawing),
         contentAlignment = Alignment.Center
     ) {
@@ -226,6 +241,7 @@ fun SecurityGateScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier
+                            .weight(1f)
                             .clip(RoundedCornerShape(18.dp))
                             .instantTouchPress {
                                 lockPersonaIdx = (lockPersonaIdx + 1) % personas.size
@@ -235,50 +251,62 @@ fun SecurityGateScreen(
                     ) {
                         CosmicDragonAvatar(
                             mood = currentMood,
-                            size = 46.dp,
+                            size = 48.dp,
                             persona = activePersona
                         )
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Arcanum Celestial Vault",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = VaultPureWhite,
-                                fontWeight = FontWeight.Bold
+                                color = CosmicTextPure,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = "${activePersona.label} • Ketuk Ganti",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = activePersona.badgeColor,
-                                fontSize = 11.sp
+                                fontSize = 11.sp,
+                                maxLines = 1
                             )
                         }
                     }
 
-                    // Tombol Lupa PIN / Pemulihan Sandi
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Tombol Lupa PIN / Pemulihan Sandi (Apple Frosted Glass Pill)
                     Surface(
                         modifier = Modifier
+                            .wrapContentWidth()
                             .clip(RoundedCornerShape(50))
                             .instantTouchPress { onForgotPinClick() }
                             .testTag("forgot_pin_lock_button"),
-                        color = VaultCharcoal,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, VaultSlate)
+                        color = CosmicGlass,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                listOf(StarlightCyan.copy(alpha = 0.6f), NebulaViolet.copy(alpha = 0.6f))
+                            )
+                        )
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.HelpOutline,
                                 contentDescription = "Lupa PIN",
-                                tint = VaultLime,
-                                modifier = Modifier.size(15.dp)
+                                tint = StarlightCyan,
+                                modifier = Modifier.size(16.dp)
                             )
                             Text(
                                 text = "Lupa PIN?",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = VaultPureWhite,
-                                fontWeight = FontWeight.SemiBold
+                                color = CosmicTextPure,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
                             )
                         }
                     }
@@ -291,6 +319,22 @@ fun SecurityGateScreen(
             }
 
             Spacer(modifier = Modifier.height(14.dp))
+
+            // Auto-trigger Android Hardware Biometrics (BiometricPrompt) when reaching biometric stage
+            LaunchedEffect(securityState.stage) {
+                if (securityState.stage == AuthStage.BIOMETRIC_STEP) {
+                    triggerHardwareBiometricIfAvailable(
+                        context = context,
+                        title = "Autentikasi Sidik Jari Perangkat",
+                        subtitle = "Tempelkan jari Anda pada sensor fisik ponsel untuk membuka brankas",
+                        onSuccess = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onBiometricSuccess()
+                        },
+                        onErrorFeedback = onBiometricFeedback
+                    )
+                }
+            }
 
             // 2. Main Center Stage: PIN Entry or Real Ultrasonic Fingerprint Scanner
             if (securityState.stage == AuthStage.BIOMETRIC_STEP) {
@@ -347,7 +391,7 @@ private fun MinimalSecurityProgressRow(currentStage: AuthStage) {
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             for (stepNum in 1..4) {
                 val isCompleted = currentStage.layerNumber > stepNum
@@ -355,13 +399,13 @@ private fun MinimalSecurityProgressRow(currentStage: AuthStage) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(5.dp)
+                        .height(6.dp)
                         .clip(CircleShape)
                         .background(
                             when {
-                                isCompleted -> VaultLime
-                                isActive -> VaultMintCard
-                                else -> VaultSlate
+                                isCompleted -> PastelMint
+                                isActive -> StarlightCyan
+                                else -> Color(0x3338BDF8)
                             }
                         )
                 )
@@ -377,7 +421,8 @@ private fun MinimalSecurityProgressRow(currentStage: AuthStage) {
                 AuthStage.UNLOCKED -> "Terbuka"
             },
             style = MaterialTheme.typography.labelMedium,
-            color = VaultMintCard
+            color = StarlightCyan,
+            fontWeight = FontWeight.SemiBold
         )
     }
 }
@@ -401,8 +446,8 @@ private fun PinEntryGateCard(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(containerColor = VaultCharcoal),
-            border = androidx.compose.foundation.BorderStroke(1.dp, VaultSlate)
+            colors = CardDefaults.cardColors(containerColor = CosmicGlass),
+            border = androidx.compose.foundation.BorderStroke(1.dp, CosmicGradientGlassHighlight)
         ) {
             Column(
                 modifier = Modifier
@@ -733,15 +778,15 @@ private fun FastPinKeypadButton(
         modifier = modifier
             .height(58.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(VaultCharcoal)
-            .border(1.dp, VaultSlate.copy(alpha = 0.65f), RoundedCornerShape(18.dp))
+            .background(Color(0x331E293B))
+            .border(1.dp, Color(0x3338BDF8), RoundedCornerShape(18.dp))
             .instantTouchPress(onPressInstant = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.headlineMedium,
-            color = VaultPureWhite,
+            color = CosmicTextPure,
             fontWeight = FontWeight.SemiBold
         )
     }
@@ -757,7 +802,8 @@ private fun FastPinKeypadButton(
 fun InteractiveFingerprintScannerPad(
     onScanCompleted: () -> Unit,
     onPartialReleaseWarning: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onTriggerHardwareBiometric: (() -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
@@ -793,6 +839,14 @@ fun InteractiveFingerprintScannerPad(
                         )
                     )
                 )
+                .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    if (onTriggerHardwareBiometric != null) {
+                        onTriggerHardwareBiometric()
+                    } else {
+                        onScanCompleted()
+                    }
+                }
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
@@ -800,14 +854,15 @@ fun InteractiveFingerprintScannerPad(
                         scanProgress = 0
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
 
+                        if (onTriggerHardwareBiometric != null) {
+                            onTriggerHardwareBiometric()
+                        }
+
                         var completed = false
                         val job: Job = scope.launch {
-                            for (step in 1..20) {
-                                delay(36L)
-                                scanProgress = step * 5
-                                if (scanProgress % 25 == 0) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                }
+                            for (step in 1..10) {
+                                delay(25L)
+                                scanProgress = step * 10
                             }
                             completed = true
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -816,12 +871,12 @@ fun InteractiveFingerprintScannerPad(
 
                         waitForUpOrCancellation()
                         isFingerDown = false
-                        if (!completed) {
+                        if (!completed && onTriggerHardwareBiometric == null) {
                             val reached = scanProgress
                             job.cancel()
                             scanProgress = 0
                             onPartialReleaseWarning(
-                                "Pemindaian sidik jari terputus ($reached%). Tempel & tahan jari Anda hingga 100%!"
+                                "Ketuk atau gunakan sensor fisik perangkat untuk verifikasi sidik jari!"
                             )
                         }
                     }
@@ -889,9 +944,9 @@ fun InteractiveFingerprintScannerPad(
 
         Text(
             text = if (isFingerDown) {
-                "Memindai alur sidik jari... Tahan ($scanProgress%)"
+                "Memverifikasi sidik jari perangkat keras..."
             } else {
-                "Tempel & TAHAN jari Anda pada sensor di atas hingga 100%"
+                "Ketuk sensor untuk verifikasi sidik jari perangkat keras"
             },
             style = MaterialTheme.typography.labelLarge,
             color = if (isFingerDown) VaultLime else VaultMintCard,
@@ -910,8 +965,8 @@ private fun BiometricVerificationCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = VaultCharcoal),
-        border = androidx.compose.foundation.BorderStroke(1.dp, VaultSlate)
+        colors = CardDefaults.cardColors(containerColor = CosmicGlass),
+        border = androidx.compose.foundation.BorderStroke(1.dp, CosmicGradientGlassHighlight)
     ) {
         Column(
             modifier = Modifier
@@ -965,7 +1020,8 @@ private fun BiometricVerificationCard(
 
             InteractiveFingerprintScannerPad(
                 onScanCompleted = onHoldFingerprintCompleted,
-                onPartialReleaseWarning = onHoldFingerprintFeedback
+                onPartialReleaseWarning = onHoldFingerprintFeedback,
+                onTriggerHardwareBiometric = onTriggerHardwareBiometric
             )
 
             if (!statusMessage.isNullOrBlank()) {
@@ -987,25 +1043,32 @@ private fun BiometricVerificationCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            OutlinedButton(
+            Button(
                 onClick = onTriggerHardwareBiometric,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(52.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CosmicGradientCta)
                     .testTag("trigger_biometric_button"),
                 shape = RoundedCornerShape(16.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, VaultLime.copy(alpha = 0.5f)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = VaultLime)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = CosmicTextPure
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.Fingerprint,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    tint = CosmicTextPure,
+                    modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Buka Dialog Sensor Hardware OS",
-                    style = MaterialTheme.typography.labelLarge
+                    text = "Buka Pemindai Sidik Jari OS",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = CosmicTextPure,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -1121,9 +1184,28 @@ fun SecondaryBiometricReAuthDialog(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
+                LaunchedEffect(Unit) {
+                    triggerHardwareBiometricIfAvailable(
+                        context = context,
+                        title = "Otorisasi Biometrik Perangkat",
+                        subtitle = if (modalState.isShareIntent) "Bagikan ${modalState.item.name}" else "Ekspor ${modalState.item.name}",
+                        onSuccess = onAuthenticated,
+                        onErrorFeedback = { msg -> feedbackText = msg }
+                    )
+                }
+
                 InteractiveFingerprintScannerPad(
                     onScanCompleted = onAuthenticated,
-                    onPartialReleaseWarning = { warning -> feedbackText = warning }
+                    onPartialReleaseWarning = { warning -> feedbackText = warning },
+                    onTriggerHardwareBiometric = {
+                        triggerHardwareBiometricIfAvailable(
+                            context = context,
+                            title = "Otorisasi Biometrik Perangkat",
+                            subtitle = if (modalState.isShareIntent) "Bagikan ${modalState.item.name}" else "Ekspor ${modalState.item.name}",
+                            onSuccess = onAuthenticated,
+                            onErrorFeedback = { msg -> feedbackText = msg }
+                        )
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -1180,7 +1262,9 @@ fun ForgotPinRecoveryDialog(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var isIdentityVerified by remember { mutableStateOf(false) }
-    var answerInput by remember { mutableStateOf("") }
+    var answerInput1 by remember { mutableStateOf("") }
+    var answerInput2 by remember { mutableStateOf("") }
+    var answerInput3 by remember { mutableStateOf("") }
     var verificationError by remember { mutableStateOf<String?>(null) }
 
     var selectedVaultId by remember { mutableIntStateOf(1) }
@@ -1264,49 +1348,85 @@ fun ForgotPinRecoveryDialog(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
+                    // Pertanyaan 1
                     Surface(
                         color = VaultCharcoal,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text(
-                                text = "Pertanyaan Keamanan:",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = VaultLime
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = securityConfig.recoveryQuestion,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = VaultPureWhite
-                            )
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Pertanyaan Keamanan 1:", style = MaterialTheme.typography.labelSmall, color = VaultLime)
+                            Text(securityConfig.recoveryQuestion1, style = MaterialTheme.typography.bodyMedium, color = VaultPureWhite, fontWeight = FontWeight.SemiBold)
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
+                    Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
-                        value = answerInput,
-                        onValueChange = {
-                            answerInput = it
-                            verificationError = null
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("recovery_answer_input"),
-                        label = { Text("Jawaban / Kata Kunci Pemulihan") },
+                        value = answerInput1,
+                        onValueChange = { answerInput1 = it; verificationError = null },
+                        modifier = Modifier.fillMaxWidth().testTag("recovery_answer_input"),
+                        label = { Text("Jawaban Pertanyaan 1") },
                         singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = VaultCharcoal,
-                            unfocusedContainerColor = VaultCharcoal,
-                            focusedBorderColor = VaultLime,
-                            unfocusedBorderColor = VaultSlate,
-                            focusedTextColor = VaultPureWhite,
-                            unfocusedTextColor = VaultPureWhite,
-                            focusedLabelColor = VaultLime,
-                            unfocusedLabelColor = VaultPureWhite.copy(alpha = 0.7f)
+                            focusedContainerColor = VaultCharcoal, unfocusedContainerColor = VaultCharcoal,
+                            focusedBorderColor = VaultLime, unfocusedBorderColor = VaultSlate,
+                            focusedTextColor = VaultPureWhite, unfocusedTextColor = VaultPureWhite
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Pertanyaan 2
+                    Surface(
+                        color = VaultCharcoal,
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Pertanyaan Keamanan 2:", style = MaterialTheme.typography.labelSmall, color = VaultLime)
+                            Text(securityConfig.recoveryQuestion2, style = MaterialTheme.typography.bodyMedium, color = VaultPureWhite, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = answerInput2,
+                        onValueChange = { answerInput2 = it; verificationError = null },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Jawaban Pertanyaan 2") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = VaultCharcoal, unfocusedContainerColor = VaultCharcoal,
+                            focusedBorderColor = VaultLime, unfocusedBorderColor = VaultSlate,
+                            focusedTextColor = VaultPureWhite, unfocusedTextColor = VaultPureWhite
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Pertanyaan 3
+                    Surface(
+                        color = VaultCharcoal,
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Pertanyaan Keamanan 3:", style = MaterialTheme.typography.labelSmall, color = VaultLime)
+                            Text(securityConfig.recoveryQuestion3, style = MaterialTheme.typography.bodyMedium, color = VaultPureWhite, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = answerInput3,
+                        onValueChange = { answerInput3 = it; verificationError = null },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Jawaban Pertanyaan 3") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = VaultCharcoal, unfocusedContainerColor = VaultCharcoal,
+                            focusedBorderColor = VaultLime, unfocusedBorderColor = VaultSlate,
+                            focusedTextColor = VaultPureWhite, unfocusedTextColor = VaultPureWhite
                         )
                     )
 
@@ -1314,13 +1434,22 @@ fun ForgotPinRecoveryDialog(
 
                     Button(
                         onClick = {
-                            val expected = securityConfig.recoveryAnswer.trim()
-                            if (expected.isNotBlank() && answerInput.trim().equals(expected, ignoreCase = true)) {
+                            val a1 = securityConfig.recoveryAnswer1.trim()
+                            val a2 = securityConfig.recoveryAnswer2.trim()
+                            val a3 = securityConfig.recoveryAnswer3.trim()
+                            val legacy = securityConfig.recoveryAnswer.trim()
+
+                            val m1 = a1.isBlank() || answerInput1.trim().equals(a1, ignoreCase = true)
+                            val m2 = a2.isBlank() || answerInput2.trim().equals(a2, ignoreCase = true)
+                            val m3 = a3.isBlank() || answerInput3.trim().equals(a3, ignoreCase = true)
+                            val mLegacy = legacy.isNotBlank() && answerInput1.trim().equals(legacy, ignoreCase = true)
+
+                            if ((m1 && m2 && m3 && (answerInput1.isNotBlank() || answerInput2.isNotBlank() || answerInput3.isNotBlank())) || mLegacy) {
                                 verificationError = null
                                 val triggered = triggerHardwareBiometricIfAvailable(
                                     context = context,
                                     title = "Otorisasi Kredensial Perangkat Pemulihan",
-                                    subtitle = "Pindai sidik jari atau masukkan PIN perangkat Anda untuk menyelesaikan pemulihan",
+                                    subtitle = "Pindai sensor sidik jari perangkat untuk menyelesaikan pemulihan",
                                     onSuccess = {
                                         verificationError = null
                                         isIdentityVerified = true
@@ -1333,7 +1462,7 @@ fun ForgotPinRecoveryDialog(
                                     isIdentityVerified = true
                                 }
                             } else {
-                                verificationError = "Jawaban pertanyaan pemulihan tidak sesuai. Akses pemulihan ditolak."
+                                verificationError = "Jawaban pertanyaan keamanan pemulihan tidak sesuai. Akses pemulihan ditolak."
                             }
                         },
                         modifier = Modifier
