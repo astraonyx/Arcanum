@@ -885,7 +885,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         _statusBannerMessage.value = null
     }
 
-    private fun postBanner(message: String) {
+    fun postBanner(message: String) {
         _statusBannerMessage.value = message
     }
 

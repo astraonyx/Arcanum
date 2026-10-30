@@ -80,6 +80,7 @@ import com.example.ui.ZipScannerToolScreen
 import com.example.ui.instantTouchPress
 import com.example.ui.theme.CosmicBorderHairline
 import com.example.ui.theme.CosmicObsidian
+import com.example.ui.theme.CosmicTextPure
 import com.example.ui.theme.CosmicVoid
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.NebulaViolet

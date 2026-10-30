@@ -311,8 +311,8 @@ fun CosmicDragonAvatar(
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
+            val w = this.size.width
+            val h = this.size.height
             val cx = w * 0.5f
             val cy = h * 0.52f
             val r = (w.coerceAtMost(h) * 0.44f)

@@ -681,23 +681,25 @@ class VaultRepository(
         )
 
         val entity = VaultItemEntity(
+            vaultProfileId = vaultId,
             name = sourceFile.name,
-            originalUri = sourceFile.absolutePath,
-            internalPlainPath = plainFile.absolutePath,
-            internalEncryptedPath = nyxFile.absolutePath,
             extension = ext,
             category = category.name,
+            groupArchiveName = null,
+            internalPlainPath = plainFile.absolutePath,
+            internalNyxPath = nyxFile.absolutePath,
             sizeBytes = fSize,
+            paddedSizeBytes = EncryptionScriptEngine.padmeSize(fSize),
             isEncrypted = encryptImmediately,
-            previewSnippet = preview,
-            addedTimestamp = stamp,
-            nyxHeaderHex = hex,
-            sha256Checksum = checksum,
-            vaultId = vaultId,
-            durationSeconds = extractMediaDurationSeconds(plainFile, category)
+            cipherAlgorithm = cfg.activeScriptName,
+            checksumPreview = checksum,
+            rawContentPreview = preview,
+            encryptedHexPreview = hex,
+            durationSeconds = extractMediaDurationSeconds(plainFile, category),
+            addedAt = stamp
         )
 
-        val newId = vaultDao.insertItem(entity)
+        val newId = vaultDao.insertItem(entity).toInt()
         return entity.copy(id = newId)
     }
 
