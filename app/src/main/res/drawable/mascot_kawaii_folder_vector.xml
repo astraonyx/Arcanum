@@ -1,0 +1,60 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <group android:name="kf_root">
+        <!-- Tab -->
+        <path
+            android:fillColor="#2563EB"
+            android:pathData="M110,85 L185,85 A20,20 0 0 1 205,105 L205,135 A20,20 0 0 1 185,155 L110,155 A20,20 0 0 1 90,135 L90,105 A20,20 0 0 1 110,85 Z" />
+        <!-- Paper Peek -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:fillAlpha="0.9"
+            android:pathData="M125,78 L230,78 A10,10 0 0 1 240,88 L240,113 A10,10 0 0 1 230,123 L125,123 A10,10 0 0 1 115,113 L115,88 A10,10 0 0 1 125,78 Z" />
+        <!-- Folder Body -->
+        <path
+            android:fillColor="#F59E0B"
+            android:pathData="M111,115 L289,115 A46,46 0 0 1 335,161 L335,294 A46,46 0 0 1 289,340 L111,340 A46,46 0 0 1 65,294 L65,161 A46,46 0 0 1 111,115 Z" />
+        <!-- Rim Highlight -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:fillAlpha="0.4"
+            android:pathData="M95,125 Q200,120 305,125 Q320,126 320,138 Q200,132 80,138 Q80,126 95,125 Z" />
+        <!-- Eyes -->
+        <path
+            android:fillColor="#0F172A"
+            android:pathData="M145,186 A18,24 0 1 1 144.9,186 Z" />
+        <path
+            android:fillColor="#1E3A8A"
+            android:pathData="M145,194 A15,19 0 1 1 144.9,194 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M141,192.5 A7.5,7.5 0 1 1 140.9,192.5 Z" />
+        <path
+            android:fillColor="#0F172A"
+            android:pathData="M255,186 A18,24 0 1 1 254.9,186 Z" />
+        <path
+            android:fillColor="#1E3A8A"
+            android:pathData="M255,194 A15,19 0 1 1 254.9,194 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M251,192.5 A7.5,7.5 0 1 1 250.9,192.5 Z" />
+        <!-- Smile -->
+        <path
+            android:strokeColor="#0F172A"
+            android:strokeWidth="6"
+            android:strokeLineCap="round"
+            android:pathData="M184,240 Q200,262 216,240" />
+        <!-- Blush -->
+        <path
+            android:fillColor="#F43F5E"
+            android:fillAlpha="0.45"
+            android:pathData="M118,227 A13,8 0 1 1 117.9,227 Z" />
+        <path
+            android:fillColor="#F43F5E"
+            android:fillAlpha="0.45"
+            android:pathData="M282,227 A13,8 0 1 1 281.9,227 Z" />
+    </group>
+</vector>

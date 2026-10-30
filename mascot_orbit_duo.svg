@@ -1,0 +1,251 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%" id="arcanum-mascot-svg">
+  <defs>
+    <!-- Background Cosmic Glow Filter -->
+    <filter id="cosmicGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="blur1" />
+      <feGaussianBlur stdDeviation="24" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Linear & Radial Gradients -->
+    <!-- Dragon Luminous Gradient -->
+    <linearGradient id="gradDragonBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="25%" stop-color="#E0F2FE" />
+      <stop offset="60%" stop-color="#38BDF8" />
+      <stop offset="85%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#1E1B4B" />
+    </linearGradient>
+
+    <!-- Dragon Inner Shading -->
+    <linearGradient id="gradDragonShadow" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#0F172A" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Dragon Crystalline Wing Gradient -->
+    <linearGradient id="gradDragonWing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#BAE6FD" />
+      <stop offset="30%" stop-color="#38BDF8" />
+      <stop offset="70%" stop-color="#818CF8" />
+      <stop offset="100%" stop-color="#C084FC" />
+    </linearGradient>
+
+    <!-- Cute Folder Body Gradient -->
+    <linearGradient id="gradFolderBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE066" />
+      <stop offset="40%" stop-color="#FBBF24" />
+      <stop offset="85%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+
+    <!-- Folder Blue Tab Peek -->
+    <linearGradient id="gradFolderTab" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60A5FA" />
+      <stop offset="100%" stop-color="#2563EB" />
+    </linearGradient>
+
+    <!-- Orbit Ring 3D Gradient -->
+    <linearGradient id="gradOrbitRing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="35%" stop-color="#818CF8" />
+      <stop offset="70%" stop-color="#C084FC" />
+      <stop offset="100%" stop-color="#38BDF8" />
+    </linearGradient>
+
+    <!-- Star Glow Gradient -->
+    <radialGradient id="gradStarGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="40%" stop-color="#BAE6FD" />
+      <stop offset="80%" stop-color="#38BDF8" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- LAYER 0: AMBIENT NEBULA & FLOOR SHADOW -->
+  <g id="layer-ambient-shadow">
+    <ellipse id="floor-shadow" cx="300" cy="510" rx="140" ry="22" fill="#000000" opacity="0.35" filter="url(#cosmicGlow)" />
+    <circle cx="300" cy="300" r="180" fill="#38BDF8" opacity="0.08" filter="url(#cosmicGlow)" />
+    <circle cx="380" cy="240" r="140" fill="#818CF8" opacity="0.12" filter="url(#cosmicGlow)" />
+  </g>
+
+  <!-- LAYER 1: 3D ORBIT RING (BACK HALF) -->
+  <g id="layer-orbit-back">
+    <path id="orbit-ring-back" d="M 120 370 C 110 280, 220 220, 360 215 C 450 212, 510 250, 520 295" 
+          fill="none" stroke="url(#gradOrbitRing)" stroke-width="12" stroke-linecap="round" opacity="0.45" />
+  </g>
+
+  <!-- LAYER 2: DRAGON BACK ELEMENTS (BACK WING & BACK TAIL LOOP) -->
+  <g id="layer-dragon-back">
+    <g id="dragon-wing-back" transform-origin="360 210">
+      <path d="M 360 210 C 390 140, 470 110, 500 130 C 470 170, 440 210, 395 240 Z" 
+            fill="url(#gradDragonWing)" opacity="0.75" />
+      <path d="M 380 200 C 420 140, 480 130, 510 155 C 470 190, 430 220, 395 240 Z" 
+            fill="#6366F1" opacity="0.5" />
+    </g>
+  </g>
+
+  <!-- LAYER 3: KAWAII SMILING FOLDER (CENTERPIECE) -->
+  <g id="layer-folder" transform-origin="300 350">
+    
+    <!-- Blue Tab Peek -->
+    <g id="folder-tab-group">
+      <rect id="folder-tab-back" x="230" y="242" width="95" height="55" rx="16" fill="url(#gradFolderTab)" />
+      <rect id="folder-paper-peek" x="250" y="236" width="100" height="35" rx="8" fill="#FFFFFF" opacity="0.9" />
+    </g>
+
+    <!-- Folder Main Body (Squircle) -->
+    <g id="folder-body-group">
+      <rect id="folder-body" x="205" y="265" width="190" height="155" rx="32" fill="url(#gradFolderBody)" 
+            filter="drop-shadow(0 14px 28px rgba(217, 119, 6, 0.35))" />
+      
+      <!-- Glossy top rim highlight -->
+      <path d="M 225 272 Q 300 268 375 272 Q 388 273 388 285 Q 300 280 212 285 Q 212 273 225 272 Z" 
+            fill="#FFFFFF" opacity="0.45" />
+      
+      <!-- Inner soft corner highlight -->
+      <circle cx="235" cy="295" r="8" fill="#FFFFFF" opacity="0.5" />
+    </g>
+
+    <!-- Folder Kawaii Face Elements -->
+    <g id="folder-face">
+      <!-- Left Eye -->
+      <g id="folder-eye-left" transform-origin="262 335">
+        <ellipse cx="262" cy="335" rx="13" ry="18" fill="#0F172A" />
+        <ellipse cx="262" cy="337" rx="11" ry="14" fill="#1E3A8A" />
+        <circle cx="259" cy="328" r="5.5" fill="#FFFFFF" />
+        <circle cx="266" cy="341" r="2.5" fill="#FFFFFF" />
+      </g>
+
+      <!-- Right Eye -->
+      <g id="folder-eye-right" transform-origin="338 335">
+        <ellipse cx="338" cy="335" rx="13" ry="18" fill="#0F172A" />
+        <ellipse cx="338" cy="337" rx="11" ry="14" fill="#1E3A8A" />
+        <circle cx="335" cy="328" r="5.5" fill="#FFFFFF" />
+        <circle cx="342" cy="341" r="2.5" fill="#FFFFFF" />
+      </g>
+
+      <!-- Kawaii Mouth -->
+      <path id="folder-mouth" d="M 288 358 Q 300 373 312 358" fill="none" stroke="#0F172A" stroke-width="4.5" stroke-linecap="round" />
+
+      <!-- Rosy Cheeks -->
+      <ellipse id="folder-blush-left" cx="242" cy="354" rx="9" ry="6" fill="#F43F5E" opacity="0.45" />
+      <ellipse id="folder-blush-right" cx="358" cy="354" rx="9" ry="6" fill="#F43F5E" opacity="0.45" />
+    </g>
+  </g>
+
+  <!-- LAYER 4: DRAGON FRONT (MAJESTIC HEAD, BODY SWIRL, WINGS, TAIL) -->
+  <g id="layer-dragon-front" transform-origin="300 260">
+
+    <!-- Dragon Sinuous Body Arch -->
+    <path id="dragon-body-trail" d="M 140 450 C 180 520, 310 525, 410 470 C 490 420, 520 320, 460 230 C 420 180, 370 170, 310 185" 
+          fill="none" stroke="url(#gradDragonBody)" stroke-width="54" stroke-linecap="round" stroke-linejoin="round" 
+          filter="drop-shadow(0 10px 25px rgba(56, 189, 248, 0.45))" />
+    
+    <!-- Dragon Inner Belly Shading Curve -->
+    <path id="dragon-belly-line" d="M 160 445 C 200 500, 300 505, 395 460 C 465 415, 490 330, 445 250" 
+          fill="none" stroke="#0A0F29" stroke-width="12" stroke-linecap="round" opacity="0.65" />
+
+    <!-- Dragon Front Crystalline Wing -->
+    <g id="dragon-wing-front" transform-origin="380 250">
+      <path d="M 380 250 C 440 180, 540 160, 570 190 C 530 250, 460 290, 400 300 Z" 
+            fill="url(#gradDragonWing)" filter="url(#softGlow)" />
+      <path d="M 400 245 C 460 190, 530 185, 555 210 C 510 260, 450 285, 410 290 Z" 
+            fill="#FFFFFF" opacity="0.4" />
+      <path d="M 390 270 C 440 220, 500 220, 520 245 C 480 285, 430 305, 395 305 Z" 
+            fill="url(#gradDragonWing)" opacity="0.85" />
+    </g>
+
+    <!-- Dragon Tail Plume with Starlight Flame -->
+    <g id="dragon-tail-group" transform-origin="140 450">
+      <path id="dragon-tail-plume" d="M 140 450 C 100 440, 75 480, 85 520 C 105 500, 125 490, 150 480 Z" 
+            fill="url(#gradDragonWing)" filter="url(#softGlow)" />
+      <polygon id="dragon-tail-crystal" points="75,510 88,495 105,515 90,530" fill="#38BDF8" />
+    </g>
+
+    <!-- Dragon Majestic Head & Crest Group -->
+    <g id="dragon-head-group" transform-origin="280 180">
+      
+      <!-- Mane / Celestial Crest Spines -->
+      <g id="dragon-crest" transform-origin="300 160">
+        <path d="M 300 150 C 340 100, 400 95, 440 115 C 390 145, 340 165, 305 170 Z" fill="url(#gradDragonWing)" />
+        <path d="M 290 165 C 335 125, 390 120, 420 145 C 375 170, 330 185, 295 185 Z" fill="url(#gradDragonWing)" opacity="0.9" />
+        <path d="M 280 180 C 320 150, 370 150, 395 175 C 355 195, 315 205, 285 200 Z" fill="url(#gradDragonWing)" opacity="0.8" />
+      </g>
+
+      <!-- Dragon Crown Horns -->
+      <path id="dragon-horns" d="M 270 155 C 290 90, 350 70, 375 80 C 345 115, 315 145, 285 165 Z" 
+            fill="#FFFFFF" filter="url(#softGlow)" />
+
+      <!-- Dragon Head Base & Snout -->
+      <path id="dragon-head-base" d="M 210 185 C 220 165, 255 155, 280 165 C 300 175, 310 205, 290 225 C 265 245, 240 235, 225 220 C 210 215, 195 205, 210 185 Z" 
+            fill="url(#gradDragonBody)" filter="drop-shadow(0 6px 15px rgba(56, 189, 248, 0.5))" />
+      
+      <!-- Noble draconic snout contour -->
+      <path d="M 198 198 C 215 190, 235 195, 255 190 C 240 205, 220 210, 205 208 Z" fill="#BAE6FD" />
+
+      <!-- Radiant Glowing Dragon Eye -->
+      <g id="dragon-eye-group" transform-origin="240 185">
+        <path id="dragon-eye-glow" d="M 230 184 Q 242 176 254 184 Q 242 192 230 184 Z" fill="#0284C7" />
+        <path id="dragon-eye-iris" d="M 233 184 Q 242 178 251 184 Q 242 190 233 184 Z" fill="#38BDF8" filter="url(#softGlow)" />
+        <ellipse id="dragon-eye-pupil" cx="242" cy="184" rx="2.5" ry="4.5" fill="#FFFFFF" />
+      </g>
+
+      <!-- Draconic Jaw whisker / aura barb -->
+      <path d="M 235 225 C 230 245, 240 260, 245 265 C 245 255, 248 245, 250 235 Z" fill="#38BDF8" />
+    </g>
+
+  </g>
+
+  <!-- LAYER 5: 3D ORBIT RING (FRONT HALF) -->
+  <g id="layer-orbit-front">
+    <path id="orbit-ring-front" d="M 520 295 C 530 360, 440 435, 310 445 C 190 455, 125 410, 120 370" 
+          fill="none" stroke="url(#gradOrbitRing)" stroke-width="13" stroke-linecap="round" 
+          filter="drop-shadow(0 0 16px rgba(56, 189, 248, 0.8))" />
+    
+    <!-- Orbit Bright Core Specular -->
+    <path d="M 460 350 C 400 420, 330 440, 260 440" 
+          fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  </g>
+
+  <!-- LAYER 6: CELESTIAL STARDUST & 4-POINT SPARKLE STARS -->
+  <g id="layer-stardust">
+    <!-- Top-Right Diamond Star -->
+    <g id="star-1" transform="translate(470, 160)" transform-origin="0 0">
+      <path d="M 0 -18 Q 0 0 18 0 Q 0 0 0 18 Q 0 0 -18 0 Q 0 0 0 -18 Z" fill="url(#gradStarGlow)" filter="url(#softGlow)" />
+      <circle cx="0" cy="0" r="3.5" fill="#FFFFFF" />
+    </g>
+
+    <!-- Top-Left Starlight Sparkle -->
+    <g id="star-2" transform="translate(150, 180)" transform-origin="0 0">
+      <path d="M 0 -14 Q 0 0 14 0 Q 0 0 0 14 Q 0 0 -14 0 Q 0 0 0 -14 Z" fill="url(#gradStarGlow)" filter="url(#softGlow)" />
+      <circle cx="0" cy="0" r="2.5" fill="#FFFFFF" />
+    </g>
+
+    <!-- Bottom-Right Orbit Starlight Sparkle -->
+    <g id="star-3" transform="translate(460, 430)" transform-origin="0 0">
+      <path d="M 0 -12 Q 0 0 12 0 Q 0 0 0 12 Q 0 0 -12 0 Q 0 0 0 -12 Z" fill="url(#gradStarGlow)" />
+      <circle cx="0" cy="0" r="2" fill="#FFFFFF" />
+    </g>
+
+    <!-- Floating Cosmic Stardust Dots -->
+    <circle id="dust-1" cx="180" cy="290" r="3" fill="#BAE6FD" opacity="0.7" />
+    <circle id="dust-2" cx="430" cy="290" r="4" fill="#E0E7FF" opacity="0.8" />
+    <circle id="dust-3" cx="360" cy="150" r="3" fill="#F472B6" opacity="0.75" />
+    <circle id="dust-4" cx="220" cy="470" r="3.5" fill="#38BDF8" opacity="0.8" />
+    <circle id="dust-5" cx="480" cy="260" r="2.5" fill="#FFFFFF" opacity="0.9" />
+  </g>
+
+</svg>

@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%" id="arcanum-kawaii-folder-svg">
+  <defs>
+    <filter id="folderGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <linearGradient id="kfGradBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE066" />
+      <stop offset="35%" stop-color="#FBBF24" />
+      <stop offset="80%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+
+    <linearGradient id="kfGradTab" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60A5FA" />
+      <stop offset="100%" stop-color="#2563EB" />
+    </linearGradient>
+
+    <radialGradient id="kfStarGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="50%" stop-color="#BAE6FD" />
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- AMBIENT SHADOW -->
+  <ellipse id="kf-shadow" cx="200" cy="355" rx="110" ry="18" fill="#000000" opacity="0.28" filter="url(#folderGlow)" />
+
+  <!-- MAIN FOLDER ROOT GROUP -->
+  <g id="kf-root" transform-origin="200 240">
+    
+    <!-- Tab & Paper peek -->
+    <g id="kf-tab-group">
+      <rect id="kf-tab" x="90" y="85" width="115" height="70" rx="20" fill="url(#kfGradTab)" />
+      <rect id="kf-paper" x="115" y="78" width="125" height="45" rx="10" fill="#FFFFFF" opacity="0.95" />
+    </g>
+
+    <!-- Folder Main Squircle Body -->
+    <g id="kf-body-group">
+      <rect id="kf-body" x="65" y="115" width="270" height="225" rx="46" fill="url(#kfGradBody)" 
+            filter="drop-shadow(0 16px 32px rgba(217, 119, 6, 0.35))" />
+      
+      <!-- Top rim glossy highlight -->
+      <path d="M 95 125 Q 200 120 305 125 Q 320 126 320 142 Q 200 135 80 142 Q 80 126 95 125 Z" 
+            fill="#FFFFFF" opacity="0.45" />
+      <circle cx="105" cy="160" r="11" fill="#FFFFFF" opacity="0.5" />
+    </g>
+
+    <!-- Kawaii Face Elements -->
+    <g id="kf-face" transform-origin="200 225">
+      <!-- Left Eye -->
+      <g id="kf-eye-left" transform-origin="145 210">
+        <ellipse cx="145" cy="210" rx="18" ry="24" fill="#0F172A" />
+        <ellipse cx="145" cy="213" rx="15" ry="19" fill="#1E3A8A" />
+        <circle cx="141" cy="200" r="7.5" fill="#FFFFFF" />
+        <circle cx="150" cy="218" r="3.5" fill="#FFFFFF" />
+      </g>
+
+      <!-- Right Eye -->
+      <g id="kf-eye-right" transform-origin="255 210">
+        <ellipse cx="255" cy="210" rx="18" ry="24" fill="#0F172A" />
+        <ellipse cx="255" cy="213" rx="15" ry="19" fill="#1E3A8A" />
+        <circle cx="251" cy="200" r="7.5" fill="#FFFFFF" />
+        <circle cx="260" cy="218" r="3.5" fill="#FFFFFF" />
+      </g>
+
+      <!-- Mouth -->
+      <path id="kf-mouth" d="M 184 240 Q 200 262 216 240" fill="none" stroke="#0F172A" stroke-width="6" stroke-linecap="round" />
+
+      <!-- Blush Cheeks -->
+      <ellipse id="kf-blush-left" cx="118" cy="235" rx="13" ry="8" fill="#F43F5E" opacity="0.45" />
+      <ellipse id="kf-blush-right" cx="282" cy="235" rx="13" ry="8" fill="#F43F5E" opacity="0.45" />
+    </g>
+
+    <!-- Floating Mini Stars -->
+    <g id="kf-star-left" transform="translate(48, 140)">
+      <path d="M 0 -10 Q 0 0 10 0 Q 0 0 0 10 Q 0 0 -10 0 Q 0 0 0 -10 Z" fill="url(#kfStarGlow)" />
+    </g>
+    <g id="kf-star-right" transform="translate(345, 120)">
+      <path d="M 0 -12 Q 0 0 12 0 Q 0 0 0 12 Q 0 0 -12 0 Q 0 0 0 -12 Z" fill="url(#kfStarGlow)" />
+    </g>
+  </g>
+</svg>

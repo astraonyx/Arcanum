@@ -61,9 +61,40 @@ Arcanum blends **Apple Human Interface Guidelines (HIG) Minimalism** with **Astr
 ---
 
 ## 5. Astrodracon Mascot Guidelines
-- Source Master Asset: `D:\Users\Astraonyx\Astrodracon Cosmic Dragon Asset Sheet.svg` and `.png`.
-- Visual Features:
-  - Deep cosmic midnight body (`#0A122B`) with radiant sapphire-cyan crystal highlights.
-  - Sinuous dragon tail with starlight flame spade.
-  - Modular animation states: Idle (loop), Wave, Walk, Fly, Charge, and Alert.
-  - Expressive eyes with stardust highlights and blinking cycle.
+- Master Vector Source: `D:\Users\Astraonyx\Arcanum\mascot_orbit_duo.svg` and `mascot_kawaii_folder.svg`.
+- Vector Paradigm: Zero raster PNG dependency. 100% scalable vector geometry with semantic groups for animation hooks.
+- Semantic Group Hierarchy:
+  - `#layer-ambient-shadow`: Dynamic floor ellipse scale & blur filter.
+  - `#layer-orbit-back` & `#layer-orbit-front`: 3D tilted orbital rings with neon cyan-indigo gradient.
+  - `#layer-folder`: Kawaii squircle container, anime eyes (`#folder-eye-left`, `#folder-eye-right`), cheeks (`#folder-blush-*`), mouth (`#folder-mouth`).
+  - `#layer-dragon-front`: Sinuous sweeping dragon body, crystal wings (`#dragon-wing-front`), crest plume (`#dragon-crest`), and starlight eye (`#dragon-eye-iris`).
+  - `#layer-stardust`: Twinkling 4-point stars (`#star-1`, `#star-2`, `#star-3`) and floating cosmic dust.
+
+---
+
+## 6. GSAP Timeline Animation Choreography (gsap-timeline Standard)
+All mascot micro-interactions are driven by sequenced GSAP Timelines with position parameters, labels, and defaults:
+
+### 1. Master Idle Breathing Timeline (`tlIdle`)
+- **Defaults**: `{ ease: "sine.inOut" }`, continuous loop (`repeat: -1`).
+- **Dragon Float**: `y: -14`, duration 2.2s, yoyo.
+- **Wing Flap**: `rotation: 6`, `scale: 1.04`, duration 1.5s, `transformOrigin: "bottom left"`, relative offset `"<0.2"`.
+- **Crest Sway**: `rotation: -4`, `scaleY: 1.05`, duration 1.8s, `transformOrigin: "bottom center"`.
+- **Kawaii Counter-Bob**: `y: -6`, `scale: 1.015`, duration 2.0s, relative offset `"<0.3"`.
+- **Eye Blink Label**: `tl.addLabel("blink", 1.8)` -> `scaleY: 0.1`, duration 0.12s, yoyo, repeat 1.
+- **Stardust Twinkle**: Staggered diamond star rotations (`rotation: 45`, `scale: 1.35`).
+
+### 2. Celebrate / Leap Timeline (`tlCheer`)
+- **Squash & Prep**: `scaleX: 1.15`, `scaleY: 0.85`, `y: 10`, duration 0.15s, ease `"power2.in"`.
+- **Leap Peak**: `y: -40`, `scaleX: 0.9`, `scaleY: 1.15`, duration 0.35s, ease `"back.out(2)"`.
+- **Dragon Wings Expand**: `rotation: 18`, `scale: 1.15`, aligned with leap `"<"`.
+- **Elastic Landing**: `y: 0`, `scale: 1.0`, duration 0.5s, ease `"elastic.out(1, 0.4)"`.
+
+### 3. Vault Security Guard Timeline (`tlGuard`)
+- **Defensive Wrap**: Dragon lowers horns `rotation: -8`, wraps tightly around folder `y: 15`, `scale: 1.05`.
+- **Laser Glint**: Dragon eye iris shifts to `#00F0FF`, `scale: 1.4`.
+- **Forcefield Pulse**: Orbit ring stroke width thickens to `18px`, glow intensifies.
+
+### 4. Stealth Snooze Timeline (`tlSleep`)
+- **Eyelids Close**: `#folder-eye-*` and `#dragon-eye-*` `scaleY: 0.05`, duration 0.4s.
+- **Gentle Settle**: Mascot rests downwards `y: 8`, shadow dims `opacity: 0.15`.
